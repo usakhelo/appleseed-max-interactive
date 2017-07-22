@@ -31,6 +31,7 @@
 
 // appleseed-max headers.
 #include "appleseedrenderer/appleseedrendererparamdlg.h"
+#include "appleseedrenderer/appleseedinteractive.h"
 #include "appleseedrenderer/datachunks.h"
 #include "appleseedrenderer/projectbuilder.h"
 #include "appleseedrenderer/renderercontroller.h"
@@ -99,6 +100,11 @@ void AppleseedRenderer::GetClassName(MSTR& s)
 void AppleseedRenderer::DeleteThis()
 {
     delete this;
+}
+
+void* AppleseedRenderer::GetInterface(ULONG id)
+{
+  return id == I_RENDER_ID ? &AppleseedInteractiveRenderer() : NULL;
 }
 
 #if MAX_RELEASE == MAX_RELEASE_R19

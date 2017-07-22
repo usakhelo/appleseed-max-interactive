@@ -36,6 +36,7 @@
 #include "foundation/platform/windows.h"    // include before 3ds Max headers
 
 // 3ds Max headers.
+#include <interactiverender.h>
 #include <iparamb2.h>
 #include <max.h>
 #include <render.h>
@@ -60,6 +61,9 @@ class AppleseedRenderer
     virtual void GetClassName(MSTR& s) override;
 
     virtual void DeleteThis() override;
+
+    // Animatable.
+    virtual void* GetInterface(ULONG id) override;
 
 #if MAX_RELEASE == MAX_RELEASE_R19
 

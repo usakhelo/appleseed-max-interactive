@@ -31,6 +31,7 @@
 // appleseed-max headers.
 #include "appleseedrenderer/maxsceneentities.h"
 #include "appleseedrenderer/renderersettings.h"
+#include "appleseedrenderer/appleseedinteractive.h"
 
 // appleseed.foundation headers.
 #include "foundation/platform/windows.h"    // include before 3ds Max headers
@@ -123,6 +124,9 @@ class AppleseedRenderer
 
     virtual IOResult Save(ISave* isave) override;
     virtual IOResult Load(ILoad* iload) override;
+
+    AppleseedInteractiveRenderer* m_irenderer;
+    AppleseedIIRenderMgr* m_irendermgr;
 
   private:
     RendererSettings            m_settings;

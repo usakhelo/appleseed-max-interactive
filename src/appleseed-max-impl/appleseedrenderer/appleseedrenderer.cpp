@@ -84,6 +84,11 @@ Class_ID AppleseedRenderer::get_class_id()
 AppleseedRenderer::AppleseedRenderer()
   : m_settings(RendererSettings::defaults())
 {
+    m_irenderer = new AppleseedInteractiveRenderer();
+    m_irendermgr = new AppleseedIIRenderMgr();
+    m_irenderer->SetIIRenderMgr(m_irendermgr);
+    m_irendermgr->mIRenderInterface = m_irenderer;
+
     clear();
 }
 
@@ -99,12 +104,14 @@ void AppleseedRenderer::GetClassName(MSTR& s)
 
 void AppleseedRenderer::DeleteThis()
 {
+    delete m_irendermgr;
+    delete m_irenderer;
     delete this;
 }
 
 void* AppleseedRenderer::GetInterface(ULONG id)
 {
-  return id == I_RENDER_ID ? &AppleseedInteractiveRenderer() : NULL;
+    return id == I_RENDER_ID ? m_irenderer : NULL;
 }
 
 #if MAX_RELEASE == MAX_RELEASE_R19

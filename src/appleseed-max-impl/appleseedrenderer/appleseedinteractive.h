@@ -46,11 +46,7 @@ public:
   virtual void SetIRenderTitle(const MCHAR* pProgressTitle) override;
   virtual const MCHAR* GetIRenderTitle() const override;
   
-  Bitmap* mpBitmap;
-  Renderer* mpRenderer;
   IInteractiveRender* mIRenderInterface;
 
-  HWND mHwnd;
-  ViewExp* mpViewExp;
   Color mProcessLineColor;
 };

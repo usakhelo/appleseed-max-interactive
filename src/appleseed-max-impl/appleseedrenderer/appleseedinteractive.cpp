@@ -30,11 +30,16 @@ bool AppleseedIIRenderMgr::IsActive()
 
 HWND AppleseedIIRenderMgr::GetHWnd() const
 {
-  return HWND();
+  if (mIRenderInterface)
+    return mIRenderInterface->GetOwnerWnd();
+
+  return NULL;
 }
 
 ViewExp* AppleseedIIRenderMgr::GetViewExp()
 {
+  if (mIRenderInterface)
+    return mIRenderInterface->GetViewExp();
   return nullptr;
 }
 
@@ -60,6 +65,7 @@ void AppleseedIIRenderMgr::UpdateDisplay()
 
 void AppleseedIIRenderMgr::Render()
 {
+  int i = 5;
   return;
 }
 

@@ -67,6 +67,9 @@ class AppleseedRenderer
     // Animatable.
     virtual void* GetInterface(ULONG id) override;
 
+    // -- from InterfaceServer
+    //virtual BaseInterface* GetInterface(Interface_ID id);
+
 #if MAX_RELEASE == MAX_RELEASE_R19
 
     virtual bool IsStopSupported() const override;
@@ -126,8 +129,6 @@ class AppleseedRenderer
     virtual IOResult Save(ISave* isave) override;
     virtual IOResult Load(ILoad* iload) override;
 
-    AppleseedIIRenderMgr* m_irendermgr;
-
     // IInteractiveRender
     virtual void BeginSession() override;
     virtual void EndSession() override;
@@ -157,6 +158,16 @@ class AppleseedRenderer
     virtual ActionTableId GetActionTableId() override;
     virtual ActionCallback* GetActionCallback() override;
     virtual BOOL IsRendering() override;
+
+    IRenderProgressCallback* m_CB;
+    //AppleseedIIRenderMgr m_irendermgr;
+    Bitmap* mpBitmap;
+    ViewExp* mpViewExp;
+    DefaultLight mDefaultLights[2];
+    int mNumDefaultLights;
+    HWND mHwnd;
+    INode* mInode;
+    Box2 mBox;
 
   private:
     RendererSettings            m_settings;

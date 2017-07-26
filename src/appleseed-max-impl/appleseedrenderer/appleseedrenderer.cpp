@@ -31,11 +31,11 @@
 
 // appleseed-max headers.
 #include "appleseedrenderer/appleseedrendererparamdlg.h"
-#include "appleseedrenderer/appleseedinteractive.h"
 #include "appleseedrenderer/datachunks.h"
 #include "appleseedrenderer/projectbuilder.h"
 #include "appleseedrenderer/renderercontroller.h"
 #include "appleseedrenderer/tilecallback.h"
+#include "appleseedrenderer/appleseedinteractive.h"
 #include "utilities.h"
 #include "version.h"
 
@@ -84,10 +84,7 @@ Class_ID AppleseedRenderer::get_class_id()
 
 AppleseedRenderer::AppleseedRenderer()
   : m_settings(RendererSettings::defaults())
-  , m_CB(nullptr)
-  , mpBitmap(nullptr)
-  , mpViewExp(nullptr)
-  , mInode(nullptr)
+  , m_interactive_renderer(nullptr)
 {
     clear();
 }
@@ -104,6 +101,10 @@ void AppleseedRenderer::GetClassName(MSTR& s)
 
 void AppleseedRenderer::DeleteThis()
 {
+    if (m_interactive_renderer != nullptr)
+    {
+        delete m_interactive_renderer;
+    }
     delete this;
 }
 
@@ -111,33 +112,13 @@ void* AppleseedRenderer::GetInterface(ULONG id)
 {
   if (id == I_RENDER_ID)
   {
-    // create the bitmap
-    //BitmapInfo bi;
-    //bi.SetWidth(640);
-    //bi.SetHeight(480);
-    //bi.SetType(BMM_TRUE_64); // 64-bit color: 16 bits each for Red, Green, Blue, and Alpha.
-    //bi.SetFlags(MAP_HAS_ALPHA);
-    //bi.SetAspect(1.0f);
+    if (m_interactive_renderer == nullptr)
+    {
+      m_interactive_renderer = new AppleseedIInteractiveRender(const_cast<AppleseedRenderer&>(*this));
+    }
 
-    //Bitmap* bitmap = TheManager->Create(&bi);
-    //bitmap->Display();
-
-    ViewExp& view_exp = GetCOREInterface7()->GetActiveViewExp();
-    //int numDefaultLights = GetCOREInterface7()->InitDefaultLights(mDefaultLights, 2, FALSE, &view_exp, TRUE);
-
-    //this->SetOwnerWnd(bitmap->GetWindow());
-    //this->SetIIRenderMgr(&m_irendermgr);
-    //this->SetBitmap(bitmap);
-    this->SetSceneINode(GetCOREInterface()->GetRootNode());
-    this->SetUseViewINode(false);
-    this->SetViewINode(NULL);
-    //this->SetViewExp(&view_exp);
-    //mBox.SetEmpty();
-    //this->SetRegion(mBox);
-    //this->SetDefaultLights(mDefaultLights, numDefaultLights);
-    //this->SetProgressCallback(dynamic_cast<IRenderProgressCallback*>(&m_irendermgr));
-    
-    return NULL; // (IInteractiveRender*)this;
+    return dynamic_cast<IInteractiveRender*>(m_interactive_renderer);
+    //return static_cast<AppleseedIInteractiveRender*>(m_interactive_renderer);
   }
   else
   {
@@ -146,10 +127,10 @@ void* AppleseedRenderer::GetInterface(ULONG id)
 }
 
 // InterfaceServer
-//BaseInterface* AppleseedRenderer::GetInterface(Interface_ID id)
-//{
-//    return Renderer::GetInterface(id);
-//}
+BaseInterface* AppleseedRenderer::GetInterface(Interface_ID id)
+{
+    return Renderer::GetInterface(id);
+}
 
 #if MAX_RELEASE == MAX_RELEASE_R19
 
@@ -596,154 +577,6 @@ void AppleseedRenderer::clear()
     m_default_lights.clear();
     m_time = 0;
     m_entities.clear();
-}
-
-
-//
-// IIRenderer
-//
-
-void AppleseedRenderer::BeginSession()
-{
-  return;
-}
-
-void AppleseedRenderer::EndSession()
-{
-  return;
-}
-
-void AppleseedRenderer::SetOwnerWnd(HWND hOwnerWnd)
-{
-  mHwnd = hOwnerWnd;
-}
-
-HWND AppleseedRenderer::GetOwnerWnd() const
-{
-  return mHwnd;
-}
-
-void AppleseedRenderer::SetIIRenderMgr(IIRenderMgr* pIIRenderMgr)
-{
-  return;
-}
-
-IIRenderMgr * AppleseedRenderer::GetIIRenderMgr(IIRenderMgr* pIIRenderMgr) const
-{
-  return NULL;
-  //return m_irendermgr;
-}
-
-void AppleseedRenderer::SetBitmap(Bitmap* pDestBitmap)
-{
-  mpBitmap = pDestBitmap;
-}
-
-Bitmap* AppleseedRenderer::GetBitmap(Bitmap* pDestBitmap) const
-{
-  return NULL;
-}
-
-void AppleseedRenderer::SetSceneINode(INode* pSceneINode)
-{
-  mInode = pSceneINode;
-}
-
-INode* AppleseedRenderer::GetSceneINode() const
-{
-  return mInode;
-}
-
-void AppleseedRenderer::SetUseViewINode(bool bUseViewINode)
-{
-  return;
-}
-
-bool AppleseedRenderer::GetUseViewINode() const
-{
-  return false;
-}
-
-void AppleseedRenderer::SetViewINode(INode* pViewINode)
-{
-  return;
-}
-
-INode* AppleseedRenderer::GetViewINode() const
-{
-  return nullptr;
-}
-
-void AppleseedRenderer::SetViewExp(ViewExp* pViewExp)
-{
-  mpViewExp = pViewExp;
-}
-
-ViewExp* AppleseedRenderer::GetViewExp() const
-{
-  return mpViewExp;
-}
-
-void AppleseedRenderer::SetRegion(const Box2& region)
-{
-  return;
-}
-
-const Box2& AppleseedRenderer::GetRegion() const
-{
-  return mBox;
-}
-
-void AppleseedRenderer::SetDefaultLights(DefaultLight* pDefLights, int numDefLights)
-{
-  mNumDefaultLights = numDefLights;
-}
-
-const DefaultLight* AppleseedRenderer::GetDefaultLights(int& numDefLights) const
-{
-  return mDefaultLights;
-}
-
-void AppleseedRenderer::SetProgressCallback(IRenderProgressCallback* pProgCB)
-{
-  m_CB = pProgCB;
-}
-
-const IRenderProgressCallback* AppleseedRenderer::GetProgressCallback() const
-{
-  return m_CB;
-}
-
-void AppleseedRenderer::Render(Bitmap* pDestBitmap)
-{
-  UNUSED_PARAM(pDestBitmap);
-  int i = 5;
-  return;
-}
-
-ULONG AppleseedRenderer::GetNodeHandle(int x, int y)
-{
-  return 0;
-}
-
-bool AppleseedRenderer::GetScreenBBox(Box2& sBBox, INode * pINode)
-{
-  return true;
-}
-
-ActionTableId AppleseedRenderer::GetActionTableId()
-{
-  return ActionTableId();
-}
-
-ActionCallback* AppleseedRenderer::GetActionCallback()
-{
-  return nullptr;
-}
-
-BOOL AppleseedRenderer::IsRendering()
-{
-  return 0;
 }
 
 

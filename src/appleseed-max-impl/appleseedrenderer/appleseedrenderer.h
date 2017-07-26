@@ -95,6 +95,8 @@ class AppleseedRenderer
 
 #endif
 
+    virtual RefTargetHandle	Clone(RemapDir	&remap) override;
+
     virtual RefResult NotifyRefChanged(
         const Interval&         changeInt,
         RefTargetHandle         hTarget,

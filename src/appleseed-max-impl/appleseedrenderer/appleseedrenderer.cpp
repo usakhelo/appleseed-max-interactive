@@ -71,6 +71,7 @@ namespace
 }
 
 AppleseedRendererClassDesc g_appleseed_renderer_classdesc;
+AppleseedIInteractiveRender g_appleseed_irenderer;
 
 
 //
@@ -84,8 +85,8 @@ Class_ID AppleseedRenderer::get_class_id()
 
 AppleseedRenderer::AppleseedRenderer()
   : m_settings(RendererSettings::defaults())
-  , m_interactive_renderer(nullptr)
 {
+    //m_interactive_renderer = new AppleseedIInteractiveRender(/*const_cast<AppleseedRenderer&>(*this)*/);
     clear();
 }
 
@@ -101,10 +102,7 @@ void AppleseedRenderer::GetClassName(MSTR& s)
 
 void AppleseedRenderer::DeleteThis()
 {
-    if (m_interactive_renderer != nullptr)
-    {
-        delete m_interactive_renderer;
-    }
+    //delete m_interactive_renderer;
     delete this;
 }
 
@@ -112,13 +110,12 @@ void* AppleseedRenderer::GetInterface(ULONG id)
 {
   if (id == I_RENDER_ID)
   {
-    if (m_interactive_renderer == nullptr)
+    /*if (m_interactive_renderer == nullptr)
     {
       m_interactive_renderer = new AppleseedIInteractiveRender(const_cast<AppleseedRenderer&>(*this));
-    }
+    }*/
 
-    return dynamic_cast<IInteractiveRender*>(m_interactive_renderer);
-    //return static_cast<AppleseedIInteractiveRender*>(m_interactive_renderer);
+    return static_cast<IInteractiveRender*>(&g_appleseed_irenderer);
   }
   else
   {

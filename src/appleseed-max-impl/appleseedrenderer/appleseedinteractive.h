@@ -61,18 +61,19 @@ public:
 
 class AppleseedIInteractiveRender
   : public IInteractiveRender
-  , public Renderer
+  //, public Renderer
   //, public MaxSDK::Util::Noncopyable
 {
 public:
-  AppleseedIInteractiveRender(AppleseedRenderer& renderer);
+  //AppleseedIInteractiveRender(AppleseedRenderer& renderer);
+  AppleseedIInteractiveRender();
   virtual ~AppleseedIInteractiveRender();
 
   //From Animatable
   SClass_ID	SuperClassID() { return	RENDERER_CLASS_ID; }
 
   // InterfaceServer
-  using Renderer::GetInterface;
+  //using Renderer::GetInterface;
   virtual BaseInterface* GetInterface(Interface_ID id) override;
 
   // IInteractiveRender
@@ -107,7 +108,7 @@ public:
 
   HWND m_OwnerWnd;
   // The render plugin through which render sessions are created
-  AppleseedRenderer& m_renderer_plugin;
+  //AppleseedRenderer& m_renderer_plugin;
   
   // These are the values which we need to save in order to pass to the constructor of the render session context
   Bitmap* m_bitmap;
@@ -124,10 +125,12 @@ public:
   bool m_currently_rendering;
 
   // Inherited via Renderer
-  virtual RefResult NotifyRefChanged(const Interval& changeInt, RefTargetHandle hTarget, PartID& partID, RefMessage message, BOOL propagate) override;
+  /*virtual RefResult NotifyRefChanged(const Interval& changeInt, RefTargetHandle hTarget, PartID& partID, RefMessage message, BOOL propagate) override;
   virtual int Open(INode * scene, INode* vnode, ViewParams * viewPar, RendParams& rp, HWND hwnd, DefaultLight* defaultLights, int numDefLights, RendProgressCallback* prog) override;
   virtual int Render(TimeValue t, Bitmap* tobm, FrameRendParams& frp, HWND hwnd, RendProgressCallback* prog, ViewParams* viewPar) override;
   virtual void Close(HWND hwnd, RendProgressCallback* prog) override;
   virtual RendParamDlg* CreateParamDialog(IRendParams * ir, BOOL prog) override;
-  virtual void ResetParams() override;
+  virtual void ResetParams() override;*/
 };
+
+extern AppleseedIInteractiveRender g_appleseed_irenderer;

@@ -195,9 +195,9 @@ const MCHAR * AppleseedIIRenderMgr::GetIRenderTitle() const
 //
 
 
-AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& renderer)
-  : m_renderer_plugin(renderer)
-  , m_OwnerWnd(0)
+AppleseedIInteractiveRender::AppleseedIInteractiveRender(/*AppleseedRenderer& renderer*/)
+  //: m_renderer_plugin(renderer)
+  : m_OwnerWnd(0)
   , m_currently_rendering(false)
   , m_bitmap(nullptr)
   , m_pIIRenderMgr(nullptr)
@@ -370,38 +370,38 @@ BOOL AppleseedIInteractiveRender::IsRendering()
   return m_currently_rendering;
 }
 
-RefResult AppleseedIInteractiveRender::NotifyRefChanged(const Interval& changeInt, RefTargetHandle hTarget, PartID& partID, RefMessage message, BOOL propagate)
-{
-  return REF_DONTCARE;
-}
-
-int AppleseedIInteractiveRender::Open(INode* scene, INode* vnode, ViewParams* viewPar, RendParams& rp, HWND hwnd, DefaultLight* defaultLights = NULL, int numDefLights = 0, RendProgressCallback* prog = NULL)
-{
-  UNUSED_PARAM(prog);
-  UNUSED_PARAM(numDefLights);
-  UNUSED_PARAM(defaultLights);
-  return 0;
-}
-
-int AppleseedIInteractiveRender::Render(TimeValue t, Bitmap* tobm, FrameRendParams& frp, HWND hwnd, RendProgressCallback* prog = NULL, ViewParams* viewPar = NULL)
-{
-  UNUSED_PARAM(viewPar);
-  UNUSED_PARAM(prog);
-  return 0;
-}
-
-void AppleseedIInteractiveRender::Close(HWND hwnd, RendProgressCallback* prog = NULL)
-{
-  UNUSED_PARAM(prog);
-}
-
-RendParamDlg * AppleseedIInteractiveRender::CreateParamDialog(IRendParams* ir, BOOL prog = FALSE)
-{
-  UNUSED_PARAM(prog);
-  return nullptr;
-}
-
-void AppleseedIInteractiveRender::ResetParams()
-{
-}
+//RefResult AppleseedIInteractiveRender::NotifyRefChanged(const Interval& changeInt, RefTargetHandle hTarget, PartID& partID, RefMessage message, BOOL propagate)
+//{
+//  return REF_DONTCARE;
+//}
+//
+//int AppleseedIInteractiveRender::Open(INode* scene, INode* vnode, ViewParams* viewPar, RendParams& rp, HWND hwnd, DefaultLight* defaultLights = NULL, int numDefLights = 0, RendProgressCallback* prog = NULL)
+//{
+//  UNUSED_PARAM(prog);
+//  UNUSED_PARAM(numDefLights);
+//  UNUSED_PARAM(defaultLights);
+//  return 0;
+//}
+//
+//int AppleseedIInteractiveRender::Render(TimeValue t, Bitmap* tobm, FrameRendParams& frp, HWND hwnd, RendProgressCallback* prog = NULL, ViewParams* viewPar = NULL)
+//{
+//  UNUSED_PARAM(viewPar);
+//  UNUSED_PARAM(prog);
+//  return 0;
+//}
+//
+//void AppleseedIInteractiveRender::Close(HWND hwnd, RendProgressCallback* prog = NULL)
+//{
+//  UNUSED_PARAM(prog);
+//}
+//
+//RendParamDlg * AppleseedIInteractiveRender::CreateParamDialog(IRendParams* ir, BOOL prog = FALSE)
+//{
+//  UNUSED_PARAM(prog);
+//  return nullptr;
+//}
+//
+//void AppleseedIInteractiveRender::ResetParams()
+//{
+//}
 

@@ -68,10 +68,6 @@ class AppleseedRenderer
     // Animatable.
     virtual void* GetInterface(ULONG id) override;
 
-    // InterfaceServer
-    using Renderer::GetInterface;
-    virtual BaseInterface* GetInterface(Interface_ID id) override;
-
     AppleseedIInteractiveRender* m_interactive_renderer;
 
 #if MAX_RELEASE == MAX_RELEASE_R19

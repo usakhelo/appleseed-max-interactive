@@ -12,6 +12,8 @@ AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& rend
   : m_renderer_plugin(renderer)
   , m_OwnerWnd(0)
   , m_currently_rendering(false)
+  , m_current_progress(0)
+  , m_keeprendering(true)
   , m_bitmap(nullptr)
   , m_pIIRenderMgr(nullptr)
   , m_pSceneINode(nullptr)
@@ -40,10 +42,10 @@ void AppleseedIInteractiveRender::update_loop_thread()
 {
   if (DbgVerify(m_pProgCB != nullptr))
   {
-    int i = 0;
-    while ( i < 100 /*m_pProgCB->Progress(1, -1) == RENDPROG_CONTINUE*/)
+    int m_current_progress = 0;
+    while (m_keeprendering /*m_current_progress < 100 /*m_pProgCB->Progress(1, -1) == RENDPROG_CONTINUE*/)
     {
-      int test = m_pProgCB->Progress(i, 100);
+      int test = m_pProgCB->Progress(m_current_progress, 100);
 
       const TimeValue current_time = GetCOREInterface()->GetTime();
 
@@ -64,11 +66,11 @@ void AppleseedIInteractiveRender::update_loop_thread()
         // Abort rendering somehow
       }
 
-      // When done rendering, sleep a while to avoid hogging the CPU.
-      //if (m_pProgCB->Progress(1, -1) == RENDPROG_CONTINUE)
+      // When done iteration, sleep a while to avoid hogging the CPU.
+      if (m_keeprendering)
       {
         Sleep(150);     // 100 ms
-        i++;
+        m_current_progress++;
       }
     }
   }
@@ -93,6 +95,7 @@ void AppleseedIInteractiveRender::BeginSession()
     m_last_pre_eval_notification_broadcast_time = current_time;
 
     //GetRenderMessageManager()->OpenMessageWindow();
+    m_keeprendering = true;
 
     // Create the thread for the render session
     m_interactiveRenderLoopThread = CreateThread(NULL, 0, updateLoopThread, this, 0, nullptr);
@@ -102,10 +105,13 @@ void AppleseedIInteractiveRender::BeginSession()
 
 void AppleseedIInteractiveRender::EndSession()
 {
+  // Should signal render thread to stop
+  auto cur_thread = GetCurrentThreadId();
+  m_keeprendering = false;
+
   // Wait for the thread to finish
   if (m_interactiveRenderLoopThread != nullptr)
   {
-    int test2 = m_pProgCB->Progress(99, 100);
     WaitForSingleObject(m_interactiveRenderLoopThread, INFINITE);
     CloseHandle(m_interactiveRenderLoopThread);
     m_interactiveRenderLoopThread = nullptr;

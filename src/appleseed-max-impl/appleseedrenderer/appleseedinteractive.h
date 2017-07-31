@@ -53,8 +53,11 @@ public:
   void update_loop_thread();
   TimeValue                   m_last_pre_eval_notification_broadcast_time;
   HANDLE                      m_interactiveRenderLoopThread;
+  bool                        m_keeprendering;
+
 
 private:
+  int                         m_current_progress;
   HWND                        m_OwnerWnd;
   AppleseedRenderer&          m_renderer_plugin;
   Bitmap*                     m_bitmap;

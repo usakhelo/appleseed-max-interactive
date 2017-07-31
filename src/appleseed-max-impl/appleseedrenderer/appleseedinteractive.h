@@ -1,18 +1,19 @@
 #pragma once
 
 // 3ds Max headers.
+#include "Rendering/IAbortableRenderer.h"
 #include <interactiverender.h>
-
 #include <vector>
 
 class AppleseedRenderer;
+typedef MaxSDK::IAbortableRenderer IAbortable;
 
 class AppleseedIInteractiveRender
   : public IInteractiveRender
+  , public IAbortable
 {
 public:
   AppleseedIInteractiveRender(AppleseedRenderer& renderer);
-  //AppleseedIInteractiveRender();
   virtual ~AppleseedIInteractiveRender();
 
   // IInteractiveRender
@@ -45,21 +46,25 @@ public:
   virtual ActionCallback* GetActionCallback() override;
   virtual BOOL IsRendering() override;
 
-  HWND m_OwnerWnd;
-  // The render plugin through which render sessions are created
-  AppleseedRenderer& m_renderer_plugin;
-  
-  // These are the values which we need to save in order to pass to the constructor of the render session context
-  Bitmap* m_bitmap;
-  IIRenderMgr* m_pIIRenderMgr;
-  INode* m_pSceneINode;
-  bool m_bUseViewINode;
-  INode* m_pViewINode;
-  ViewExp* m_pViewExp;
-  Box2 m_region;
-  std::vector<DefaultLight> m_default_lights;
-  IRenderProgressCallback* m_pProgCB;
+  // IAbortable
+  virtual void AbortRender() override;
 
-  // Specifies whether we're currently rendering
-  bool m_currently_rendering;
+  static DWORD WINAPI updateLoopThread(LPVOID ptr);
+  void update_loop_thread();
+  TimeValue                   m_last_pre_eval_notification_broadcast_time;
+  HANDLE                      m_interactiveRenderLoopThread;
+
+private:
+  HWND                        m_OwnerWnd;
+  AppleseedRenderer&          m_renderer_plugin;
+  Bitmap*                     m_bitmap;
+  IIRenderMgr*                m_pIIRenderMgr;
+  INode*                      m_pSceneINode;
+  bool                        m_bUseViewINode;
+  INode*                      m_pViewINode;
+  ViewExp*                    m_pViewExp;
+  Box2                        m_region;
+  std::vector<DefaultLight>   m_default_lights;
+  IRenderProgressCallback*    m_pProgCB;
+  bool                        m_currently_rendering;
 };

@@ -19,6 +19,7 @@ AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& rend
   , m_pViewINode(nullptr)
   , m_pViewExp(nullptr)
   , m_pProgCB(nullptr)
+  , m_interactiveRenderLoopThread(nullptr)
 {
 }
 
@@ -28,14 +29,95 @@ AppleseedIInteractiveRender::~AppleseedIInteractiveRender(void)
   EndSession();
 }
 
+DWORD WINAPI AppleseedIInteractiveRender::updateLoopThread(LPVOID ptr)
+{
+  AppleseedIInteractiveRender* pRRTInteractive = static_cast<AppleseedIInteractiveRender*>(ptr);
+  pRRTInteractive->update_loop_thread();
+  return 0;
+}
+
+void AppleseedIInteractiveRender::update_loop_thread()
+{
+  if (DbgVerify(m_pProgCB != nullptr))
+  {
+    int i = 0;
+    while ( i < 100 /*m_pProgCB->Progress(1, -1) == RENDPROG_CONTINUE*/)
+    {
+      int test = m_pProgCB->Progress(i, 100);
+
+      const TimeValue current_time = GetCOREInterface()->GetTime();
+
+      bool done_rendering = false;
+
+      if (true /*render_rti_frame(current_time, done_rendering)*/)
+      {
+        // Update the state of m_currently_rendering dynamically, such that IsRendering() returns false when rendering is done.
+        //m_currently_rendering = !done_rendering;
+
+        //GetRenderMessageManager()->LogMessage(IRenderMessageManager::MessageSource::kSource_ActiveShadeRenderer, IRenderMessageManager::MessageType::kType_Progress, 0, _T("Progress Scene"));
+
+      }
+      else
+      {
+        // Error
+        //GetRenderMessageManager()->LogMessage(IRenderMessageManager::MessageSource::kSource_ActiveShadeRenderer, IRenderMessageManager::MessageType::kType_Error, 0, _T("Error Updating Scene"));
+        // Abort rendering somehow
+      }
+
+      // When done rendering, sleep a while to avoid hogging the CPU.
+      //if (m_pProgCB->Progress(1, -1) == RENDPROG_CONTINUE)
+      {
+        Sleep(150);     // 100 ms
+        i++;
+      }
+    }
+  }
+}
+
+
+//
+// IInteractiveRender implementation
+//
+
 void AppleseedIInteractiveRender::BeginSession()
 {
-  return;
+  if (m_interactiveRenderLoopThread == nullptr)
+  {
+    const TimeValue current_time = GetCOREInterface()->GetTime();
+
+    // Pre-eval notification needs to be sent before scene nodes are evaluated, and called again whenever the time changes
+    TimeValue eval_time = current_time;  // To avoid const_cast below, and possibility of notifiee from changing the value
+                                         //!! TODO Kirin: Maybe stop broadcasting this, it's evil to broadcast notifications like this in active shade - I would need
+                                         // to replace this with a different mechanism.
+    BroadcastNotification(NOTIFY_RENDER_PREEVAL, &eval_time);
+    m_last_pre_eval_notification_broadcast_time = current_time;
+
+    //GetRenderMessageManager()->OpenMessageWindow();
+
+    // Create the thread for the render session
+    m_interactiveRenderLoopThread = CreateThread(NULL, 0, updateLoopThread, this, 0, nullptr);
+    DbgAssert(m_interactiveRenderLoopThread != nullptr);
+  }
 }
 
 void AppleseedIInteractiveRender::EndSession()
 {
-  return;
+  // Wait for the thread to finish
+  if (m_interactiveRenderLoopThread != nullptr)
+  {
+    int test2 = m_pProgCB->Progress(99, 100);
+    WaitForSingleObject(m_interactiveRenderLoopThread, INFINITE);
+    CloseHandle(m_interactiveRenderLoopThread);
+    m_interactiveRenderLoopThread = nullptr;
+  }
+
+  // Reset m_currently_rendering since we're definitely no longer rendering
+  m_currently_rendering = false;
+
+  // Run maxscript garbage collection to get rid of any leftover "leaks" from AMG.
+  //DbgVerify(ExecuteMAXScriptScript(_T("gc light:true"), true));
+
+  DbgAssert(m_interactiveRenderLoopThread == nullptr);
 }
 
 void AppleseedIInteractiveRender::SetOwnerWnd(HWND hOwnerWnd)
@@ -174,4 +256,7 @@ BOOL AppleseedIInteractiveRender::IsRendering()
   return m_currently_rendering;
 }
 
-
+void AppleseedIInteractiveRender::AbortRender()
+{
+  return;
+}

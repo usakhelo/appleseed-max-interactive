@@ -79,10 +79,13 @@ void AppleseedIInteractiveRender::update_loop_thread()
       // When done iteration, sleep a while to avoid hogging the CPU.
       //if (m_keeprendering)
       {
+        m_currently_rendering = true;
         Sleep(450);
         m_current_progress++;
       }
     }
+    m_currently_rendering = false;
+
     if (m_stopped_event != nullptr)
     {
       if (!SetEvent(m_stopped_event))
@@ -148,11 +151,11 @@ void AppleseedIInteractiveRender::EndSession()
   if (m_interactiveRenderLoopThread != nullptr)
   {
     DWORD stopped_result = WAIT_TIMEOUT;
-    while (stopped_result != WAIT_OBJECT_0)
+    /*while (stopped_result != WAIT_OBJECT_0)
     {
       Sleep(300);
       stopped_result = WaitForSingleObject(m_stopped_event, 0);
-    }
+    }*/
     //WaitForSingleObject(m_stopped_event, INFINITE);
     WaitForSingleObject(m_interactiveRenderLoopThread, INFINITE);
     CloseHandle(m_interactiveRenderLoopThread);

@@ -1,7 +1,8 @@
 #include "appleseedinteractive.h"
 
 #include "appleseedrenderer/appleseedrenderer.h"
-
+#include "Rendering/IRenderMessageManager.h"
+#include <Rendering/INoSignalCheckProgress.h>
 
 //
 // IInteractiveRender
@@ -13,7 +14,6 @@ AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& rend
   , m_OwnerWnd(0)
   , m_currently_rendering(false)
   , m_current_progress(0)
-  , m_keeprendering(true)
   , m_bitmap(nullptr)
   , m_pIIRenderMgr(nullptr)
   , m_pSceneINode(nullptr)
@@ -22,6 +22,7 @@ AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& rend
   , m_pViewExp(nullptr)
   , m_pProgCB(nullptr)
   , m_interactiveRenderLoopThread(nullptr)
+  , m_stop_event(nullptr)
 {
 }
 
@@ -43,9 +44,17 @@ void AppleseedIInteractiveRender::update_loop_thread()
   if (DbgVerify(m_pProgCB != nullptr))
   {
     int m_current_progress = 0;
-    while (m_keeprendering /*m_current_progress < 100 /*m_pProgCB->Progress(1, -1) == RENDPROG_CONTINUE*/)
+
+    DWORD stop_result = WAIT_TIMEOUT;
+    while (m_current_progress < 10 && stop_result != WAIT_OBJECT_0)
     {
-      int test = m_pProgCB->Progress(m_current_progress, 100);
+      stop_result = WaitForSingleObject(m_stop_event, 0);
+      if (stop_result == WAIT_OBJECT_0)
+        break;
+
+      MaxSDK::INoSignalCheckProgress* no_signals_progress_callback = dynamic_cast<MaxSDK::INoSignalCheckProgress*>(m_pProgCB);
+      no_signals_progress_callback->UpdateProgress(m_current_progress, 10);
+      //int test = m_pProgCB->Progress(m_current_progress, 10);
 
       const TimeValue current_time = GetCOREInterface()->GetTime();
 
@@ -67,9 +76,9 @@ void AppleseedIInteractiveRender::update_loop_thread()
       }
 
       // When done iteration, sleep a while to avoid hogging the CPU.
-      if (m_keeprendering)
+      //if (m_keeprendering)
       {
-        Sleep(150);     // 100 ms
+        Sleep(550);     // 100 ms
         m_current_progress++;
       }
     }
@@ -95,7 +104,12 @@ void AppleseedIInteractiveRender::BeginSession()
     m_last_pre_eval_notification_broadcast_time = current_time;
 
     //GetRenderMessageManager()->OpenMessageWindow();
-    m_keeprendering = true;
+    m_stop_event = CreateEvent(NULL, TRUE, FALSE, TEXT("StopRendering"));
+    if (m_stop_event == NULL)
+    {
+      DebugPrint(_T("CreateEvent failed (%d)\n"), GetLastError());
+      return;
+    }
 
     // Create the thread for the render session
     m_interactiveRenderLoopThread = CreateThread(NULL, 0, updateLoopThread, this, 0, nullptr);
@@ -106,15 +120,23 @@ void AppleseedIInteractiveRender::BeginSession()
 void AppleseedIInteractiveRender::EndSession()
 {
   // Should signal render thread to stop
-  auto cur_thread = GetCurrentThreadId();
-  m_keeprendering = false;
-
+  if (m_stop_event != nullptr)
+  {
+    if (!SetEvent(m_stop_event))
+    {
+      DebugPrint(_T("SetEvent failed (%d)\n"), GetLastError());
+      return;
+    }
+  }
   // Wait for the thread to finish
   if (m_interactiveRenderLoopThread != nullptr)
   {
+    Sleep(300);
     WaitForSingleObject(m_interactiveRenderLoopThread, INFINITE);
     CloseHandle(m_interactiveRenderLoopThread);
     m_interactiveRenderLoopThread = nullptr;
+    CloseHandle(m_stop_event);
+    m_stop_event = nullptr;
   }
 
   // Reset m_currently_rendering since we're definitely no longer rendering

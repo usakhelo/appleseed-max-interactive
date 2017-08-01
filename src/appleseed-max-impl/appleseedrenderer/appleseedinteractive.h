@@ -53,8 +53,7 @@ public:
   void update_loop_thread();
   TimeValue                   m_last_pre_eval_notification_broadcast_time;
   HANDLE                      m_interactiveRenderLoopThread;
-  bool                        m_keeprendering;
-
+  HANDLE                      m_stop_event;
 
 private:
   int                         m_current_progress;

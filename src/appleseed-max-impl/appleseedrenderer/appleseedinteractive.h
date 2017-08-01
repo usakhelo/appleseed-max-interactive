@@ -54,6 +54,7 @@ public:
   TimeValue                   m_last_pre_eval_notification_broadcast_time;
   HANDLE                      m_interactiveRenderLoopThread;
   HANDLE                      m_stop_event;
+  HANDLE                      m_stopped_event;
 
 private:
   int                         m_current_progress;

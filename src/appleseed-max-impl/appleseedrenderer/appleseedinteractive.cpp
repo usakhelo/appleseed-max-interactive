@@ -23,6 +23,7 @@ AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& rend
   , m_pProgCB(nullptr)
   , m_interactiveRenderLoopThread(nullptr)
   , m_stop_event(nullptr)
+  , m_stopped_event(nullptr)
 {
 }
 
@@ -78,8 +79,16 @@ void AppleseedIInteractiveRender::update_loop_thread()
       // When done iteration, sleep a while to avoid hogging the CPU.
       //if (m_keeprendering)
       {
-        Sleep(550);     // 100 ms
+        Sleep(450);
         m_current_progress++;
+      }
+    }
+    if (m_stopped_event != nullptr)
+    {
+      if (!SetEvent(m_stopped_event))
+      {
+        DebugPrint(_T("SetEvent2 failed (%d)\n"), GetLastError());
+        return;
       }
     }
   }
@@ -111,6 +120,13 @@ void AppleseedIInteractiveRender::BeginSession()
       return;
     }
 
+    m_stopped_event = CreateEvent(NULL, TRUE, FALSE, TEXT("RenderingStopped"));
+    if (m_stopped_event == NULL)
+    {
+      DebugPrint(_T("CreateEvent2 failed (%d)\n"), GetLastError());
+      return;
+    }
+
     // Create the thread for the render session
     m_interactiveRenderLoopThread = CreateThread(NULL, 0, updateLoopThread, this, 0, nullptr);
     DbgAssert(m_interactiveRenderLoopThread != nullptr);
@@ -131,10 +147,18 @@ void AppleseedIInteractiveRender::EndSession()
   // Wait for the thread to finish
   if (m_interactiveRenderLoopThread != nullptr)
   {
-    Sleep(300);
+    DWORD stopped_result = WAIT_TIMEOUT;
+    while (stopped_result != WAIT_OBJECT_0)
+    {
+      Sleep(300);
+      stopped_result = WaitForSingleObject(m_stopped_event, 0);
+    }
+    //WaitForSingleObject(m_stopped_event, INFINITE);
     WaitForSingleObject(m_interactiveRenderLoopThread, INFINITE);
     CloseHandle(m_interactiveRenderLoopThread);
     m_interactiveRenderLoopThread = nullptr;
+    CloseHandle(m_stopped_event);
+    m_stopped_event = nullptr;
     CloseHandle(m_stop_event);
     m_stop_event = nullptr;
   }

@@ -23,7 +23,6 @@ AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& rend
   , m_pProgCB(nullptr)
   , m_interactiveRenderLoopThread(nullptr)
   , m_stop_event(nullptr)
-  , m_stopped_event(nullptr)
 {
 }
 
@@ -44,9 +43,10 @@ void AppleseedIInteractiveRender::update_loop_thread()
 {
   if (DbgVerify(m_pProgCB != nullptr))
   {
-    int m_current_progress = 0;
+    m_currently_rendering = true;
+    m_current_progress = 0;
 
-    DWORD stop_result = WAIT_TIMEOUT;
+    DWORD stop_result = WaitForSingleObject(m_stop_event, 0);
     while (m_current_progress < 10 && stop_result != WAIT_OBJECT_0)
     {
       stop_result = WaitForSingleObject(m_stop_event, 0);
@@ -55,7 +55,6 @@ void AppleseedIInteractiveRender::update_loop_thread()
 
       MaxSDK::INoSignalCheckProgress* no_signals_progress_callback = dynamic_cast<MaxSDK::INoSignalCheckProgress*>(m_pProgCB);
       no_signals_progress_callback->UpdateProgress(m_current_progress, 10);
-      //int test = m_pProgCB->Progress(m_current_progress, 10);
 
       const TimeValue current_time = GetCOREInterface()->GetTime();
 
@@ -66,7 +65,7 @@ void AppleseedIInteractiveRender::update_loop_thread()
         // Update the state of m_currently_rendering dynamically, such that IsRendering() returns false when rendering is done.
         //m_currently_rendering = !done_rendering;
 
-        //GetRenderMessageManager()->LogMessage(IRenderMessageManager::MessageSource::kSource_ActiveShadeRenderer, IRenderMessageManager::MessageType::kType_Progress, 0, _T("Progress Scene"));
+        GetRenderMessageManager()->LogMessage(IRenderMessageManager::MessageSource::kSource_ActiveShadeRenderer, IRenderMessageManager::MessageType::kType_Progress, 0, _T("Progress Scene"));
 
       }
       else
@@ -78,22 +77,15 @@ void AppleseedIInteractiveRender::update_loop_thread()
 
       // When done iteration, sleep a while to avoid hogging the CPU.
       //if (m_keeprendering)
-      {
-        m_currently_rendering = true;
+      stop_result = WaitForSingleObject(m_stop_event, 0);
+      if (stop_result != WAIT_OBJECT_0)
         Sleep(450);
-        m_current_progress++;
-      }
+      else
+        break;
+
+      m_current_progress++;
     }
     m_currently_rendering = false;
-
-    if (m_stopped_event != nullptr)
-    {
-      if (!SetEvent(m_stopped_event))
-      {
-        DebugPrint(_T("SetEvent2 failed (%d)\n"), GetLastError());
-        return;
-      }
-    }
   }
 }
 
@@ -123,13 +115,6 @@ void AppleseedIInteractiveRender::BeginSession()
       return;
     }
 
-    m_stopped_event = CreateEvent(NULL, TRUE, FALSE, TEXT("RenderingStopped"));
-    if (m_stopped_event == NULL)
-    {
-      DebugPrint(_T("CreateEvent2 failed (%d)\n"), GetLastError());
-      return;
-    }
-
     // Create the thread for the render session
     m_interactiveRenderLoopThread = CreateThread(NULL, 0, updateLoopThread, this, 0, nullptr);
     DbgAssert(m_interactiveRenderLoopThread != nullptr);
@@ -138,30 +123,12 @@ void AppleseedIInteractiveRender::BeginSession()
 
 void AppleseedIInteractiveRender::EndSession()
 {
-  // Should signal render thread to stop
-  if (m_stop_event != nullptr)
-  {
-    if (!SetEvent(m_stop_event))
-    {
-      DebugPrint(_T("SetEvent failed (%d)\n"), GetLastError());
-      return;
-    }
-  }
   // Wait for the thread to finish
   if (m_interactiveRenderLoopThread != nullptr)
   {
-    DWORD stopped_result = WAIT_TIMEOUT;
-    /*while (stopped_result != WAIT_OBJECT_0)
-    {
-      Sleep(300);
-      stopped_result = WaitForSingleObject(m_stopped_event, 0);
-    }*/
-    //WaitForSingleObject(m_stopped_event, INFINITE);
     WaitForSingleObject(m_interactiveRenderLoopThread, INFINITE);
     CloseHandle(m_interactiveRenderLoopThread);
     m_interactiveRenderLoopThread = nullptr;
-    CloseHandle(m_stopped_event);
-    m_stopped_event = nullptr;
     CloseHandle(m_stop_event);
     m_stop_event = nullptr;
   }
@@ -313,5 +280,14 @@ BOOL AppleseedIInteractiveRender::IsRendering()
 
 void AppleseedIInteractiveRender::AbortRender()
 {
-  return;
+  // Should signal render thread to stop
+  if (m_stop_event != nullptr)
+  {
+    if (!SetEvent(m_stop_event))
+    {
+      DebugPrint(_T("SetEvent failed (%d)\n"), GetLastError());
+      return;
+    }
+  }
+  EndSession();
 }

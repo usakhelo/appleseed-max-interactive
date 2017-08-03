@@ -24,11 +24,13 @@ AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& rend
   , m_interactiveRenderLoopThread(nullptr)
   , m_stop_event(nullptr)
 {
+    InitializeCriticalSection(&m_csect);
 }
 
 AppleseedIInteractiveRender::~AppleseedIInteractiveRender(void)
 {
   // Make sure the active shade session has stopped
+  DeleteCriticalSection(&m_csect);
   EndSession();
 }
 
@@ -46,17 +48,22 @@ void AppleseedIInteractiveRender::update_loop_thread()
     m_currently_rendering = true;
     m_current_progress = 0;
 
-    DWORD stop_result = WaitForSingleObject(m_stop_event, 0);
+    DWORD stop_result = WAIT_TIMEOUT;
     while (m_current_progress < 10 && stop_result != WAIT_OBJECT_0)
     {
       stop_result = WaitForSingleObject(m_stop_event, 0);
       if (stop_result == WAIT_OBJECT_0)
         break;
 
+      EnterCriticalSection(&m_csect);
+      
       MaxSDK::INoSignalCheckProgress* no_signals_progress_callback = dynamic_cast<MaxSDK::INoSignalCheckProgress*>(m_pProgCB);
       no_signals_progress_callback->UpdateProgress(m_current_progress, 10);
 
       const TimeValue current_time = GetCOREInterface()->GetTime();
+
+      LeaveCriticalSection(&m_csect);
+
 
       bool done_rendering = false;
 
@@ -65,7 +72,7 @@ void AppleseedIInteractiveRender::update_loop_thread()
         // Update the state of m_currently_rendering dynamically, such that IsRendering() returns false when rendering is done.
         //m_currently_rendering = !done_rendering;
 
-        GetRenderMessageManager()->LogMessage(IRenderMessageManager::MessageSource::kSource_ActiveShadeRenderer, IRenderMessageManager::MessageType::kType_Progress, 0, _T("Progress Scene"));
+        //GetRenderMessageManager()->LogMessage(IRenderMessageManager::MessageSource::kSource_ActiveShadeRenderer, IRenderMessageManager::MessageType::kType_Progress, 0, _T("Progress Scene"));
 
       }
       else
@@ -123,6 +130,7 @@ void AppleseedIInteractiveRender::BeginSession()
 
 void AppleseedIInteractiveRender::EndSession()
 {
+  m_currently_rendering = false;
   // Wait for the thread to finish
   if (m_interactiveRenderLoopThread != nullptr)
   {
@@ -134,7 +142,6 @@ void AppleseedIInteractiveRender::EndSession()
   }
 
   // Reset m_currently_rendering since we're definitely no longer rendering
-  m_currently_rendering = false;
 
   // Run maxscript garbage collection to get rid of any leftover "leaks" from AMG.
   //DbgVerify(ExecuteMAXScriptScript(_T("gc light:true"), true));
@@ -289,5 +296,8 @@ void AppleseedIInteractiveRender::AbortRender()
       return;
     }
   }
+
+  EnterCriticalSection(&m_csect);
   EndSession();
+  LeaveCriticalSection(&m_csect);
 }

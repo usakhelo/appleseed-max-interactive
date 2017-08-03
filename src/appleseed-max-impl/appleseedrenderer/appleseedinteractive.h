@@ -2,11 +2,20 @@
 
 // 3ds Max headers.
 #include "Rendering/IAbortableRenderer.h"
+#include "Rendering/IRenderMessageManager.h"
+#include <Rendering/INoSignalCheckProgress.h>
 #include <interactiverender.h>
 #include <vector>
 
 class AppleseedRenderer;
 typedef MaxSDK::IAbortableRenderer IAbortable;
+
+struct MessageData
+{
+  IRenderMessageManager* m_Logger;
+  IRenderProgressCallback* m_pProgCB;
+  int progress;
+};
 
 class AppleseedIInteractiveRender
   : public IInteractiveRender
@@ -73,4 +82,5 @@ private:
   bool                        m_currently_rendering;
   CRITICAL_SECTION            m_csect;
   HWND                        m_MaxWnd;
+  MessageData                 m_mdata;
 };

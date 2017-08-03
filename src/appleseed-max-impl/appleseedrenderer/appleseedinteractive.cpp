@@ -24,14 +24,12 @@ AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& rend
   , m_interactiveRenderLoopThread(nullptr)
   , m_stop_event(nullptr)
 {
-    InitializeCriticalSection(&m_csect);
     m_MaxWnd = GetCOREInterface()->GetMAXHWnd();
 }
 
 AppleseedIInteractiveRender::~AppleseedIInteractiveRender(void)
 {
   // Make sure the active shade session has stopped
-  DeleteCriticalSection(&m_csect);
   EndSession();
 }
 
@@ -53,8 +51,11 @@ LRESULT CALLBACK AppleseedIInteractiveRender::GetMsgProc(int nCode, WPARAM wPara
       {
         case WM_COMPLETE:
         {
-          //MaxSDK::INoSignalCheckProgress* no_signals_progress_callback = dynamic_cast<MaxSDK::INoSignalCheckProgress*>(m_pProgCB);
-          //no_signals_progress_callback->UpdateProgress(m_current_progress, 10);
+          MessageData* data = (MessageData*)msg->wParam;
+          int test = data->m_pProgCB->Progress(data->progress, 10);
+          DebugPrint(_T("test: %i\n"), test);
+          //MaxSDK::INoSignalCheckProgress* no_signals_progress_callback = dynamic_cast<MaxSDK::INoSignalCheckProgress*>(data->m_pProgCB);
+          //no_signals_progress_callback->UpdateProgress(data->progress, 10);
 
           const TimeValue current_time = GetCOREInterface()->GetTime();
         }
@@ -64,23 +65,8 @@ LRESULT CALLBACK AppleseedIInteractiveRender::GetMsgProc(int nCode, WPARAM wPara
           break;
       }
 
-      switch (wParam)
-      {
-        case PM_REMOVE:
-          break;
-
-        case PM_NOREMOVE:
-          break;
-
-     
-
-        default:
-          break;
-      }
-      break;
-
     default:
-    break;
+      break;
   }
 
   return CallNextHookEx(0, nCode, wParam, lParam);
@@ -100,6 +86,9 @@ void AppleseedIInteractiveRender::update_loop_thread()
     m_currently_rendering = true;
     m_current_progress = 0;
 
+    m_mdata.m_pProgCB = m_pProgCB;
+    m_mdata.m_Logger = GetRenderMessageManager();
+
     DWORD stop_result = WAIT_TIMEOUT;
     while (m_current_progress < 10 && stop_result != WAIT_OBJECT_0)
     {
@@ -107,8 +96,9 @@ void AppleseedIInteractiveRender::update_loop_thread()
       if (stop_result == WAIT_OBJECT_0)
         break;
 
+      m_mdata.progress = m_current_progress;
       // post message to call things on UI thread
-      if (!PostMessage(m_MaxWnd, WM_COMPLETE, (WPARAM)m_current_progress, 0))
+      if (!PostMessage(m_MaxWnd, WM_COMPLETE, (WPARAM)&m_mdata, 0))
       {
         DebugPrint(_T("PostMessage failed (%d)\n"), GetLastError());
         return;

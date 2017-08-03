@@ -50,6 +50,8 @@ public:
   virtual void AbortRender() override;
 
   static DWORD WINAPI updateLoopThread(LPVOID ptr);
+  static LRESULT CALLBACK GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam);
+
   void update_loop_thread();
   TimeValue                   m_last_pre_eval_notification_broadcast_time;
   HANDLE                      m_interactiveRenderLoopThread;
@@ -70,4 +72,5 @@ private:
   IRenderProgressCallback*    m_pProgCB;
   bool                        m_currently_rendering;
   CRITICAL_SECTION            m_csect;
+  HWND                        m_MaxWnd;
 };

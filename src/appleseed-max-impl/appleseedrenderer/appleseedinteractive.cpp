@@ -25,6 +25,7 @@ AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& rend
   , m_stop_event(nullptr)
 {
     InitializeCriticalSection(&m_csect);
+    m_MaxWnd = GetCOREInterface()->GetMAXHWnd();
 }
 
 AppleseedIInteractiveRender::~AppleseedIInteractiveRender(void)
@@ -32,6 +33,57 @@ AppleseedIInteractiveRender::~AppleseedIInteractiveRender(void)
   // Make sure the active shade session has stopped
   DeleteCriticalSection(&m_csect);
   EndSession();
+}
+
+
+#define WM_COMPLETE (WM_USER + 1978)
+
+HHOOK myhook_hhook;
+LRESULT CALLBACK AppleseedIInteractiveRender::GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam)
+{
+  if (nCode < 0) // do not process message 
+    return CallNextHookEx(0, nCode, wParam, lParam);
+
+  MSG* msg = (MSG*)lParam;
+
+  switch (nCode)
+  {
+    case HC_ACTION:
+      switch (msg->message)
+      {
+        case WM_COMPLETE:
+        {
+          //MaxSDK::INoSignalCheckProgress* no_signals_progress_callback = dynamic_cast<MaxSDK::INoSignalCheckProgress*>(m_pProgCB);
+          //no_signals_progress_callback->UpdateProgress(m_current_progress, 10);
+
+          const TimeValue current_time = GetCOREInterface()->GetTime();
+        }
+        break;
+
+        default:
+          break;
+      }
+
+      switch (wParam)
+      {
+        case PM_REMOVE:
+          break;
+
+        case PM_NOREMOVE:
+          break;
+
+     
+
+        default:
+          break;
+      }
+      break;
+
+    default:
+    break;
+  }
+
+  return CallNextHookEx(0, nCode, wParam, lParam);
 }
 
 DWORD WINAPI AppleseedIInteractiveRender::updateLoopThread(LPVOID ptr)
@@ -55,15 +107,12 @@ void AppleseedIInteractiveRender::update_loop_thread()
       if (stop_result == WAIT_OBJECT_0)
         break;
 
-      EnterCriticalSection(&m_csect);
-      
-      MaxSDK::INoSignalCheckProgress* no_signals_progress_callback = dynamic_cast<MaxSDK::INoSignalCheckProgress*>(m_pProgCB);
-      no_signals_progress_callback->UpdateProgress(m_current_progress, 10);
-
-      const TimeValue current_time = GetCOREInterface()->GetTime();
-
-      LeaveCriticalSection(&m_csect);
-
+      // post message to call things on UI thread
+      if (!PostMessage(m_MaxWnd, WM_COMPLETE, (WPARAM)m_current_progress, 0))
+      {
+        DebugPrint(_T("PostMessage failed (%d)\n"), GetLastError());
+        return;
+      }
 
       bool done_rendering = false;
 
@@ -96,7 +145,6 @@ void AppleseedIInteractiveRender::update_loop_thread()
   }
 }
 
-
 //
 // IInteractiveRender implementation
 //
@@ -121,7 +169,16 @@ void AppleseedIInteractiveRender::BeginSession()
       DebugPrint(_T("CreateEvent failed (%d)\n"), GetLastError());
       return;
     }
-    //ToDO
+
+    // install getmessage hook to be able to run things on main thread
+    myhook_hhook = SetWindowsHookEx(WH_GETMESSAGE, GetMsgProc, (HINSTANCE)NULL, GetCOREInterface15()->GetMainThreadID());
+    if (myhook_hhook == NULL)
+    {
+      DebugPrint(_T("SetWindowsHookEx failed (%d)\n"), GetLastError());
+      return;
+    }
+
+    //ToDo
     // Collect the entities we're interested in.
     // Call RenderBegin() on all object instances.
     // Build the project.
@@ -158,6 +215,12 @@ void AppleseedIInteractiveRender::EndSession()
     m_interactiveRenderLoopThread = nullptr;
     CloseHandle(m_stop_event);
     m_stop_event = nullptr;
+
+    if (!UnhookWindowsHookEx(myhook_hhook))
+    {
+      DebugPrint(_T("UnhookWindowsHookEx failed (%d)\n"), GetLastError());
+      return;
+    }
   }
 
   // Reset m_currently_rendering since we're definitely no longer rendering
@@ -316,7 +379,5 @@ void AppleseedIInteractiveRender::AbortRender()
     }
   }
 
-  EnterCriticalSection(&m_csect);
   EndSession();
-  LeaveCriticalSection(&m_csect);
 }

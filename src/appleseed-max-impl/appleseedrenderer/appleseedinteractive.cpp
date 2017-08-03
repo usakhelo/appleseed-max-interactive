@@ -121,7 +121,26 @@ void AppleseedIInteractiveRender::BeginSession()
       DebugPrint(_T("CreateEvent failed (%d)\n"), GetLastError());
       return;
     }
+    //ToDO
+    // Collect the entities we're interested in.
+    // Call RenderBegin() on all object instances.
+    // Build the project.
+    // Create RendererController
+    // Create TileCallback
+    // Create the master renderer.
+    //std::auto_ptr<asr::MasterRenderer> renderer(
+    //  new asr::MasterRenderer(
+    //    project,
+    //    project.configurations().get_by_name("interactive")->get_inherited_parameters(),
+    //    &renderer_controller,
+    //    &tile_callback));
 
+    // Render the frame.
+    //renderer->render();
+
+    //Somehow get messages when objects change in scene
+    //Let renderer know to restart the render
+      
     // Create the thread for the render session
     m_interactiveRenderLoopThread = CreateThread(NULL, 0, updateLoopThread, this, 0, nullptr);
     DbgAssert(m_interactiveRenderLoopThread != nullptr);

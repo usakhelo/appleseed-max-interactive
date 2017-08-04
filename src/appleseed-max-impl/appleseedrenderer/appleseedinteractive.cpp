@@ -20,7 +20,7 @@ AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& rend
   , m_bUseViewINode(false)
   , m_pViewINode(nullptr)
   , m_pViewExp(nullptr)
-  , m_pProgCB(nullptr)
+  , m_prog_callback(nullptr)
   , m_interactiveRenderLoopThread(nullptr)
   , m_stop_event(nullptr)
 {
@@ -34,36 +34,45 @@ AppleseedIInteractiveRender::~AppleseedIInteractiveRender(void)
 }
 
 
-#define WM_COMPLETE (WM_USER + 1978)
+#define WM_UPDATE_PROGRESS (WM_APP + 222)
 
-HHOOK myhook_hhook;
 LRESULT CALLBACK AppleseedIInteractiveRender::GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
   if (nCode < 0) // do not process message 
     return CallNextHookEx(0, nCode, wParam, lParam);
 
-  MSG* msg = (MSG*)lParam;
-
   switch (nCode)
   {
     case HC_ACTION:
-      switch (msg->message)
+    {
+      switch (wParam)
       {
-        case WM_COMPLETE:
+      case PM_REMOVE:
+      {
+        MSG* msg = reinterpret_cast<MSG*>(lParam);
+        if (msg->message == WM_UPDATE_PROGRESS)
         {
-          MessageData* data = (MessageData*)msg->wParam;
-          int test = data->m_pProgCB->Progress(data->progress, 10);
-          DebugPrint(_T("test: %i\n"), test);
-          //MaxSDK::INoSignalCheckProgress* no_signals_progress_callback = dynamic_cast<MaxSDK::INoSignalCheckProgress*>(data->m_pProgCB);
-          //no_signals_progress_callback->UpdateProgress(data->progress, 10);
-
+          //std::auto_ptr<MessageData> data(reinterpret_cast<MessageData*>(msg->wParam));
+          MessageData* data = reinterpret_cast<MessageData*>(msg->wParam);
+          if (data->m_prog_callback)
+          {
+            MaxSDK::INoSignalCheckProgress* no_signals_progress_callback = dynamic_cast<MaxSDK::INoSignalCheckProgress*>(data->m_prog_callback);
+            if (no_signals_progress_callback)
+              no_signals_progress_callback->UpdateProgress(data->progress, 10);
+          }
           const TimeValue current_time = GetCOREInterface()->GetTime();
+          delete data;
         }
         break;
 
-        default:
-          break;
       }
+      break;
+
+      default:
+        break;
+      }
+    }
+    break;
 
     default:
       break;
@@ -81,13 +90,11 @@ DWORD WINAPI AppleseedIInteractiveRender::updateLoopThread(LPVOID ptr)
 
 void AppleseedIInteractiveRender::update_loop_thread()
 {
-  if (DbgVerify(m_pProgCB != nullptr))
+  if (DbgVerify(m_prog_callback != nullptr))
   {
     m_currently_rendering = true;
     m_current_progress = 0;
 
-    m_mdata.m_pProgCB = m_pProgCB;
-    m_mdata.m_Logger = GetRenderMessageManager();
 
     DWORD stop_result = WAIT_TIMEOUT;
     while (m_current_progress < 10 && stop_result != WAIT_OBJECT_0)
@@ -96,9 +103,12 @@ void AppleseedIInteractiveRender::update_loop_thread()
       if (stop_result == WAIT_OBJECT_0)
         break;
 
-      m_mdata.progress = m_current_progress;
+      MessageData* message_data = new MessageData();
+      message_data->progress = m_current_progress;
+      message_data->m_prog_callback = m_prog_callback;
+      message_data->m_Logger = GetRenderMessageManager();
       // post message to call things on UI thread
-      if (!PostMessage(m_MaxWnd, WM_COMPLETE, (WPARAM)&m_mdata, 0))
+      if (!PostMessage(m_MaxWnd, WM_UPDATE_PROGRESS, reinterpret_cast<WPARAM>(message_data), 0))
       {
         DebugPrint(_T("PostMessage failed (%d)\n"), GetLastError());
         return;
@@ -161,8 +171,8 @@ void AppleseedIInteractiveRender::BeginSession()
     }
 
     // install getmessage hook to be able to run things on main thread
-    myhook_hhook = SetWindowsHookEx(WH_GETMESSAGE, GetMsgProc, (HINSTANCE)NULL, GetCOREInterface15()->GetMainThreadID());
-    if (myhook_hhook == NULL)
+    m_hhook = SetWindowsHookEx(WH_GETMESSAGE, GetMsgProc, (HINSTANCE)NULL, GetCOREInterface15()->GetMainThreadID());
+    if (m_hhook == NULL)
     {
       DebugPrint(_T("SetWindowsHookEx failed (%d)\n"), GetLastError());
       return;
@@ -206,7 +216,7 @@ void AppleseedIInteractiveRender::EndSession()
     CloseHandle(m_stop_event);
     m_stop_event = nullptr;
 
-    if (!UnhookWindowsHookEx(myhook_hhook))
+    if (!UnhookWindowsHookEx(m_hhook))
     {
       DebugPrint(_T("UnhookWindowsHookEx failed (%d)\n"), GetLastError());
       return;
@@ -319,12 +329,12 @@ const DefaultLight* AppleseedIInteractiveRender::GetDefaultLights(int& numDefLig
 
 void AppleseedIInteractiveRender::SetProgressCallback(IRenderProgressCallback* pProgCB)
 {
-  m_pProgCB = pProgCB;
+  m_prog_callback = pProgCB;
 }
 
 const IRenderProgressCallback* AppleseedIInteractiveRender::GetProgressCallback() const
 {
-  return m_pProgCB;
+  return m_prog_callback;
 }
 
 void AppleseedIInteractiveRender::Render(Bitmap* pDestBitmap)

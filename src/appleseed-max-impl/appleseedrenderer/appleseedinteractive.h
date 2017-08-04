@@ -13,7 +13,7 @@ typedef MaxSDK::IAbortableRenderer IAbortable;
 struct MessageData
 {
   IRenderMessageManager* m_Logger;
-  IRenderProgressCallback* m_pProgCB;
+  IRenderProgressCallback* m_prog_callback;
   int progress;
 };
 
@@ -78,9 +78,9 @@ private:
   ViewExp*                    m_pViewExp;
   Box2                        m_region;
   std::vector<DefaultLight>   m_default_lights;
-  IRenderProgressCallback*    m_pProgCB;
+  IRenderProgressCallback*    m_prog_callback;
   bool                        m_currently_rendering;
   CRITICAL_SECTION            m_csect;
   HWND                        m_MaxWnd;
-  MessageData                 m_mdata;
+  HHOOK                       m_hhook;
 };

@@ -7,6 +7,7 @@
 //
 // IInteractiveRender
 //
+HANDLE               m_message_event;
 
 
 AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& renderer)
@@ -33,40 +34,58 @@ AppleseedIInteractiveRender::~AppleseedIInteractiveRender(void)
   EndSession();
 }
 
-
-#define WM_COMPLETE (WM_USER + 1978)
-
-HHOOK myhook_hhook;
 LRESULT CALLBACK AppleseedIInteractiveRender::GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
   if (nCode < 0) // do not process message 
     return CallNextHookEx(0, nCode, wParam, lParam);
 
-  MSG* msg = (MSG*)lParam;
+  MSG* msg = reinterpret_cast<MSG*>(lParam);
 
   switch (nCode)
   {
-    case HC_ACTION:
-      switch (msg->message)
+      case HC_ACTION:
       {
-        case WM_COMPLETE:
-        {
-          MessageData* data = (MessageData*)msg->wParam;
-          int test = data->m_pProgCB->Progress(data->progress, 10);
-          DebugPrint(_T("test: %i\n"), test);
-          //MaxSDK::INoSignalCheckProgress* no_signals_progress_callback = dynamic_cast<MaxSDK::INoSignalCheckProgress*>(data->m_pProgCB);
-          //no_signals_progress_callback->UpdateProgress(data->progress, 10);
+          switch (wParam)
+          {
+              case PM_REMOVE:
+              {
+                  switch (msg->message)
+                  {
+                      case WM_UPDATE_PROGRESS:
+                      {
+                          std::auto_ptr<MessageData> data(reinterpret_cast<MessageData*>(msg->wParam));
+                          int test = data->m_pProgCB->Progress(data->progress, 10);
+                          DebugPrint(_T("test: %i\n"), test);
+                          //MaxSDK::INoSignalCheckProgress* no_signals_progress_callback = dynamic_cast<MaxSDK::INoSignalCheckProgress*>(data->m_pProgCB);
+                          //no_signals_progress_callback->UpdateProgress(data->progress, 10);
 
-          const TimeValue current_time = GetCOREInterface()->GetTime();
-        }
-        break;
+                          const TimeValue current_time = GetCOREInterface()->GetTime();
 
-        default:
-          break;
+                          // signal calling thread that the message has been processed
+                          if (m_message_event != nullptr)
+                          {
+                              if (!SetEvent(m_message_event))
+                              {
+                                DebugPrint(_T("SetEvent m_message_event failed (%d)\n"), GetLastError());
+                              }
+                          }
+                      }
+                      break;
+
+                      default:
+                        break;
+                  }
+              }
+              break;
+
+              default:
+                break;
+          }
       }
-
-    default:
       break;
+
+      default:
+        break;
   }
 
   return CallNextHookEx(0, nCode, wParam, lParam);
@@ -86,9 +105,6 @@ void AppleseedIInteractiveRender::update_loop_thread()
     m_currently_rendering = true;
     m_current_progress = 0;
 
-    m_mdata.m_pProgCB = m_pProgCB;
-    m_mdata.m_Logger = GetRenderMessageManager();
-
     DWORD stop_result = WAIT_TIMEOUT;
     while (m_current_progress < 10 && stop_result != WAIT_OBJECT_0)
     {
@@ -96,13 +112,20 @@ void AppleseedIInteractiveRender::update_loop_thread()
       if (stop_result == WAIT_OBJECT_0)
         break;
 
-      m_mdata.progress = m_current_progress;
+      MessageData* message_data = new MessageData();
+      message_data->progress = m_current_progress;
+      message_data->m_pProgCB = m_pProgCB;
+      message_data->m_Logger = GetRenderMessageManager();
       // post message to call things on UI thread
-      if (!PostMessage(m_MaxWnd, WM_COMPLETE, (WPARAM)&m_mdata, 0))
+      if (!PostMessage(m_MaxWnd, WM_UPDATE_PROGRESS, reinterpret_cast<WPARAM>(message_data), 0))
       {
         DebugPrint(_T("PostMessage failed (%d)\n"), GetLastError());
         return;
       }
+
+      // wait until ui thread processes the message
+      WaitForSingleObject(m_message_event, INFINITE);
+      m_message_event = nullptr;
 
       bool done_rendering = false;
 
@@ -156,13 +179,20 @@ void AppleseedIInteractiveRender::BeginSession()
     m_stop_event = CreateEvent(NULL, TRUE, FALSE, TEXT("StopRendering"));
     if (m_stop_event == NULL)
     {
-      DebugPrint(_T("CreateEvent failed (%d)\n"), GetLastError());
+      DebugPrint(_T("CreateEvent StopRendering failed (%d)\n"), GetLastError());
+      return;
+    }
+
+    m_message_event = CreateEvent(NULL, TRUE, FALSE, TEXT("MessageProcessed"));
+    if (m_message_event == NULL)
+    {
+      DebugPrint(_T("CreateEvent MessageProcessed failed (%d)\n"), GetLastError());
       return;
     }
 
     // install getmessage hook to be able to run things on main thread
-    myhook_hhook = SetWindowsHookEx(WH_GETMESSAGE, GetMsgProc, (HINSTANCE)NULL, GetCOREInterface15()->GetMainThreadID());
-    if (myhook_hhook == NULL)
+    m_hhook = SetWindowsHookEx(WH_GETMESSAGE, GetMsgProc, (HINSTANCE)NULL, GetCOREInterface15()->GetMainThreadID());
+    if (m_hhook == NULL)
     {
       DebugPrint(_T("SetWindowsHookEx failed (%d)\n"), GetLastError());
       return;
@@ -200,13 +230,23 @@ void AppleseedIInteractiveRender::EndSession()
   // Wait for the thread to finish
   if (m_interactiveRenderLoopThread != nullptr)
   {
+    MSG msg;
+    while (PeekMessage(&msg, GetCOREInterface()->GetMAXHWnd(), 0, 0, PM_REMOVE)) {
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
+    }
+
     WaitForSingleObject(m_interactiveRenderLoopThread, INFINITE);
     CloseHandle(m_interactiveRenderLoopThread);
     m_interactiveRenderLoopThread = nullptr;
+
     CloseHandle(m_stop_event);
     m_stop_event = nullptr;
 
-    if (!UnhookWindowsHookEx(myhook_hhook))
+    CloseHandle(m_message_event);
+    m_message_event = nullptr;
+
+    if (!UnhookWindowsHookEx(m_hhook))
     {
       DebugPrint(_T("UnhookWindowsHookEx failed (%d)\n"), GetLastError());
       return;

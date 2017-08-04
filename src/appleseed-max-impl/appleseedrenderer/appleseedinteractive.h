@@ -10,6 +10,8 @@
 class AppleseedRenderer;
 typedef MaxSDK::IAbortableRenderer IAbortable;
 
+#define WM_UPDATE_PROGRESS (WM_APP + 222)
+
 struct MessageData
 {
   IRenderMessageManager* m_Logger;
@@ -59,9 +61,10 @@ public:
   virtual void AbortRender() override;
 
   static DWORD WINAPI updateLoopThread(LPVOID ptr);
+  void update_loop_thread();
+
   static LRESULT CALLBACK GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam);
 
-  void update_loop_thread();
   TimeValue                   m_last_pre_eval_notification_broadcast_time;
   HANDLE                      m_interactiveRenderLoopThread;
   HANDLE                      m_stop_event;
@@ -80,7 +83,6 @@ private:
   std::vector<DefaultLight>   m_default_lights;
   IRenderProgressCallback*    m_pProgCB;
   bool                        m_currently_rendering;
-  CRITICAL_SECTION            m_csect;
   HWND                        m_MaxWnd;
-  MessageData                 m_mdata;
+  HHOOK                       m_hhook;
 };

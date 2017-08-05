@@ -35,7 +35,7 @@
 #include "appleseedrenderer/projectbuilder.h"
 #include "appleseedrenderer/renderercontroller.h"
 #include "appleseedrenderer/tilecallback.h"
-#include "appleseedrenderer/appleseedinteractive.h"
+#include "appleseedinteractive/appleseedinteractive.h"
 #include "utilities.h"
 #include "version.h"
 
@@ -54,6 +54,7 @@
 // 3ds Max headers.
 #include <assert1.h>
 #include <iimageviewer.h>
+#include <interactiverender.h>
 #include <bitmap.h>
 
 // Standard headers.

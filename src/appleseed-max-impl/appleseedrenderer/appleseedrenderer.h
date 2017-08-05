@@ -36,7 +36,6 @@
 #include "foundation/platform/windows.h"    // include before 3ds Max headers
 
 // 3ds Max headers.
-#include <interactiverender.h>
 #include <iparamb2.h>
 #include <max.h>
 #include <render.h>
@@ -48,6 +47,7 @@
 // Standard headers.
 #include <vector>
 
+// Forward declarations.
 class AppleseedIInteractiveRender;
 
 

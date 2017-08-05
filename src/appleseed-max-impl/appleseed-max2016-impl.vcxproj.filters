@@ -51,8 +51,8 @@
     </ClCompile>
     <ClCompile Include="oslutils.cpp" />
     <ClCompile Include="seexprutils.cpp" />
-    <ClCompile Include="appleseedrenderer\appleseedinteractive.cpp">
-      <Filter>appleseedrenderer</Filter>
+    <ClCompile Include="appleseedinteractive\appleseedinteractive.cpp">
+      <Filter>appleseedinteractive</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -150,8 +150,8 @@
     </ClInclude>
     <ClInclude Include="oslutils.h" />
     <ClInclude Include="seexprutils.h" />
-    <ClInclude Include="appleseedrenderer\appleseedinteractive.h">
-      <Filter>appleseedrenderer</Filter>
+    <ClInclude Include="appleseedinteractive\appleseedinteractive.h">
+      <Filter>appleseedinteractive</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -204,6 +204,9 @@
     </Filter>
     <Filter Include="appleseedenvmap">
       <UniqueIdentifier>{e366da91-8f84-4832-886c-1a73dc7c4a22}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="appleseedinteractive">
+      <UniqueIdentifier>{ee864abd-823b-4815-bd20-52108be5b332}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

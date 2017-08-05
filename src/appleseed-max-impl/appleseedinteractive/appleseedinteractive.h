@@ -1,8 +1,8 @@
 #pragma once
 
 // 3ds Max headers.
-#include "Rendering/IAbortableRenderer.h"
-#include "Rendering/IRenderMessageManager.h"
+#include <Rendering/IAbortableRenderer.h>
+#include <Rendering/IRenderMessageManager.h>
 #include <Rendering/INoSignalCheckProgress.h>
 #include <interactiverender.h>
 #include <vector>
@@ -17,6 +17,22 @@ struct MessageData
   IRenderMessageManager* m_Logger;
   IRenderProgressCallback* m_pProgCB;
   int progress;
+};
+
+class MainThreadRunner
+{
+public:
+  MainThreadRunner();
+  ~MainThreadRunner();
+  void SetHook();
+  void UnHook();
+  void PostMessageAndWait(int progress, IRenderProgressCallback* progress_cb);
+
+private:
+  static LRESULT CALLBACK GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam);
+  void MsgProcCallback(std::auto_ptr<MessageData> data);
+  HHOOK m_hhook;
+  HANDLE m_message_event;
 };
 
 class AppleseedIInteractiveRender
@@ -63,8 +79,6 @@ public:
   static DWORD WINAPI updateLoopThread(LPVOID ptr);
   void update_loop_thread();
 
-  static LRESULT CALLBACK GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam);
-
   TimeValue                   m_last_pre_eval_notification_broadcast_time;
   HANDLE                      m_interactiveRenderLoopThread;
   HANDLE                      m_stop_event;
@@ -83,6 +97,6 @@ private:
   std::vector<DefaultLight>   m_default_lights;
   IRenderProgressCallback*    m_pProgCB;
   bool                        m_currently_rendering;
-  HWND                        m_MaxWnd;
-  HHOOK                       m_hhook;
+
+  MainThreadRunner            m_ui_thread_runner;
 };

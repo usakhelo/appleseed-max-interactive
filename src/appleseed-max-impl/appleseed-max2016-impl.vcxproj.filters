@@ -54,6 +54,9 @@
     <ClCompile Include="appleseedinteractive\appleseedinteractive.cpp">
       <Filter>appleseedinteractive</Filter>
     </ClCompile>
+    <ClCompile Include="appleseedinteractive\mainthreadrunner.cpp">
+      <Filter>appleseedinteractive</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="appleseedrenderer\appleseedrenderer.h">
@@ -151,6 +154,9 @@
     <ClInclude Include="oslutils.h" />
     <ClInclude Include="seexprutils.h" />
     <ClInclude Include="appleseedinteractive\appleseedinteractive.h">
+      <Filter>appleseedinteractive</Filter>
+    </ClInclude>
+    <ClInclude Include="appleseedinteractive\mainthreadrunner.h">
       <Filter>appleseedinteractive</Filter>
     </ClInclude>
   </ItemGroup>

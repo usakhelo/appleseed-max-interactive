@@ -2,38 +2,15 @@
 
 // 3ds Max headers.
 #include <Rendering/IAbortableRenderer.h>
-#include <Rendering/IRenderMessageManager.h>
-#include <Rendering/INoSignalCheckProgress.h>
 #include <interactiverender.h>
 #include <vector>
 
+#include "appleseedinteractive/mainthreadrunner.h"
+
 class AppleseedRenderer;
+class MainThreadRunner;
+
 typedef MaxSDK::IAbortableRenderer IAbortable;
-
-#define WM_UPDATE_PROGRESS (WM_APP + 222)
-
-struct MessageData
-{
-  IRenderMessageManager* m_Logger;
-  IRenderProgressCallback* m_pProgCB;
-  int progress;
-};
-
-class MainThreadRunner
-{
-public:
-  MainThreadRunner();
-  ~MainThreadRunner();
-  void SetHook();
-  void UnHook();
-  void PostMessageAndWait(int progress, IRenderProgressCallback* progress_cb);
-
-private:
-  static LRESULT CALLBACK GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam);
-  void MsgProcCallback(std::auto_ptr<MessageData> data);
-  HHOOK m_hhook;
-  HANDLE m_message_event;
-};
 
 class AppleseedIInteractiveRender
   : public IInteractiveRender

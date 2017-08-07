@@ -258,8 +258,8 @@ void AppleseedIInteractiveRender::RenderProject()
     RendererSettings renderer_settings = RendererSettings::defaults();
 
     // Collect the entities we're interested in.
-    //if (m_progress_cb)
-    //    m_progress_cb->SetTitle(_T("Collecting Entities..."));
+    if (m_progress_cb)
+        m_progress_cb->SetTitle(_T("Collecting Entities..."));
 
     MaxSceneEntities m_entities;
     m_entities.clear();
@@ -271,8 +271,8 @@ void AppleseedIInteractiveRender::RenderProject()
     render_begin(m_entities.m_objects, time);
 
     // Build the project.
-    //if (m_progress_cb)
-    //    m_progress_cb->SetTitle(_T("Building Project..."));
+    if (m_progress_cb)
+        m_progress_cb->SetTitle(_T("Building Project..."));
 
     asf::auto_release_ptr<asr::Project> project(
         build_project(
@@ -286,8 +286,8 @@ void AppleseedIInteractiveRender::RenderProject()
             m_bitmap,
             time));
 
-    //if (m_progress_cb)
-    //    m_progress_cb->SetTitle(_T("Rendering..."));
+    if (m_progress_cb)
+        m_progress_cb->SetTitle(_T("Rendering..."));
 
     render(this, project.ref(), renderer_settings, m_bitmap, m_progress_cb);
 
@@ -309,50 +309,16 @@ void AppleseedIInteractiveRender::update_loop_thread()
     if (DbgVerify(m_progress_cb != nullptr))
     {
         m_currently_rendering = true;
-        m_current_progress = 0;
-
-        DWORD stop_result = WAIT_TIMEOUT;
 
         RenderProject();
         
-        //while (m_current_progress < 10 && stop_result != WAIT_OBJECT_0)
-        //{
-        //    stop_result = WaitForSingleObject(m_stop_event, 0);
-        //    if (stop_result == WAIT_OBJECT_0)
-        //        break;
-
-        //    m_ui_thread_runner.PostMessageAndWait(m_current_progress, m_progress_cb);
-
-        //    bool done_rendering = false;
-
-        //    if (true /*render_rti_frame(current_time, done_rendering)*/)
-        //    {
-        //        //RenderProject();
-        //        // Update the state of m_currently_rendering dynamically, such that IsRendering() returns false when rendering is done.
-        //        //m_currently_rendering = !done_rendering;
-
-        //        //GetRenderMessageManager()->LogMessage(IRenderMessageManager::MessageSource::kSource_ActiveShadeRenderer, IRenderMessageManager::MessageType::kType_Progress, 0, _T("Progress Scene"));
-
-        //    }
-        //    else
-        //    {
-        //        // Error
-        //        //GetRenderMessageManager()->LogMessage(IRenderMessageManager::MessageSource::kSource_ActiveShadeRenderer, IRenderMessageManager::MessageType::kType_Error, 0, _T("Error Updating Scene"));
-        //        // Abort rendering somehow
-        //    }
-
-        //    // When done iteration, sleep a while to avoid hogging the CPU.
-        //    //if (m_keeprendering)
-        //    stop_result = WaitForSingleObject(m_stop_event, 0);
-        //    if (stop_result != WAIT_OBJECT_0)
-        //        Sleep(450);
-        //    else
-        //        break;
-
-        //    m_current_progress++;
-        //}
         m_currently_rendering = false;
     }
+}
+
+void AppleseedIInteractiveRender::render_thread()
+{
+    //render(this, project.ref(), renderer_settings, m_bitmap, m_progress_cb);
 }
 
 //
@@ -371,16 +337,6 @@ void AppleseedIInteractiveRender::BeginSession()
                                              // to replace this with a different mechanism.
         BroadcastNotification(NOTIFY_RENDER_PREEVAL, &eval_time);
         m_last_pre_eval_notification_broadcast_time = current_time;
-
-        //GetRenderMessageManager()->OpenMessageWindow();
-        m_stop_event = CreateEvent(NULL, TRUE, FALSE, TEXT("StopRendering"));
-        if (m_stop_event == NULL)
-        {
-            DebugPrint(_T("CreateEvent StopRendering failed (%d)\n"), GetLastError());
-            return;
-        }
-
-        //m_ui_thread_runner.SetHook();
 
         //ToDo
         // Collect the entities we're interested in.
@@ -416,21 +372,9 @@ void AppleseedIInteractiveRender::EndSession()
     // Wait for the thread to finish
     if (m_interactiveRenderLoopThread != nullptr)
     {
-        // Drain ui message queue to unlock render thread
-        MSG msg;
-        while (PeekMessage(&msg, GetCOREInterface()->GetMAXHWnd(), 0, 0, PM_REMOVE)) {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-
         WaitForSingleObject(m_interactiveRenderLoopThread, INFINITE);
         CloseHandle(m_interactiveRenderLoopThread);
         m_interactiveRenderLoopThread = nullptr;
-
-        CloseHandle(m_stop_event);
-        m_stop_event = nullptr;
-
-        //m_ui_thread_runner.UnHook();
     }
 
     // Run maxscript garbage collection to get rid of any leftover "leaks" from AMG.
@@ -587,15 +531,5 @@ BOOL AppleseedIInteractiveRender::IsRendering()
 
 void AppleseedIInteractiveRender::AbortRender()
 {
-    // Should signal render thread to stop
-    if (m_stop_event != nullptr)
-    {
-        if (!SetEvent(m_stop_event))
-        {
-            DebugPrint(_T("SetEvent failed (%d)\n"), GetLastError());
-            return;
-        }
-    }
-
     EndSession();
 }

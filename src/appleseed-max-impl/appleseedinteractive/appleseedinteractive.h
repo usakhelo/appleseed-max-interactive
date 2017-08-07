@@ -58,6 +58,7 @@ public:
     void RenderProject();
     static DWORD WINAPI updateLoopThread(LPVOID ptr);
     void update_loop_thread();
+    void render_thread();
 
     TimeValue                   m_last_pre_eval_notification_broadcast_time;
     HANDLE                      m_interactiveRenderLoopThread;

@@ -27,52 +27,44 @@
 //
 
 // Interface header.
-#include "interactiverenderercontroller.h"
+#include "interactivetilecallback.h"
 
-//// appleseed-max headers.
-//#include "appleseedinteractive.h"
+// appleseed.renderer headers.
+#include "renderer/api/frame.h"
 
 // appleseed.foundation headers.
+#include "foundation/image/canvasproperties.h"
+#include "foundation/image/color.h"
+#include "foundation/image/image.h"
+#include "foundation/image/pixel.h"
 #include "foundation/platform/atomic.h"
 #include "foundation/platform/windows.h"    // include before 3ds Max headers
 
 // 3ds Max headers.
-#include "interactiverender.h"
-#include "render.h"
+#include <assert1.h>
+#include <bitmap.h>
+
+// Standard headers.
+#include <algorithm>
 
 namespace asf = foundation;
 namespace asr = renderer;
 
-InteractiveRendererController::InteractiveRendererController(
-    IInteractiveRender*     renderer,
-    RendProgressCallback*   progress_cb,
-    volatile asf::uint32*   rendered_tile_count,
-    const size_t            total_tile_count)
-  : m_progress_cb(progress_cb)
-  , m_renderer(renderer)
-  , m_rendered_tile_count(rendered_tile_count)
-  , m_total_tile_count(total_tile_count)
-  , m_status(ContinueRendering)
+InteractiveTileCallback::InteractiveTileCallback(
+    Bitmap*                         bitmap,
+    MainThreadRunner*               thread_runner,
+    volatile foundation::uint32*    rendered_tile_count
+    )
+    : TileCallback(bitmap, rendered_tile_count)
+  , m_bitmap(bitmap)
+  , m_ui_thread_runner(thread_runner)
 {
 }
 
-void InteractiveRendererController::on_rendering_begin()
+void InteractiveTileCallback::post_render(
+    const asr::Frame*   frame)
 {
-    m_status = ContinueRendering;
+    TileCallback::post_render(frame);
+    m_ui_thread_runner->PostUpdateMessage(m_bitmap);
 }
 
-void InteractiveRendererController::on_progress()
-{
-    const int done =
-        static_cast<int>(asf::atomic_read(m_rendered_tile_count));
-    const int total = static_cast<int>(m_total_tile_count);
-
-    m_status = m_renderer->IsRendering()
-            ? ContinueRendering
-            : AbortRendering;
-}
-
-asr::IRendererController::Status InteractiveRendererController::get_status() const
-{
-    return m_status;
-}

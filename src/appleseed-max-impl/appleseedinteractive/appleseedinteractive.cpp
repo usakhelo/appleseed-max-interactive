@@ -3,9 +3,9 @@
 #include "appleseedinteractive.h"
 
 // appleseed-max headers.
+#include "appleseedinteractive/interactiverenderercontroller.h"
 #include "appleseedrenderer/appleseedrenderer.h"
 #include "appleseedrenderer/projectbuilder.h"
-#include "appleseedrenderer/renderercontroller.h"
 #include "appleseedrenderer/tilecallback.h"
 
 // appleseed.renderer headers.
@@ -169,6 +169,7 @@ namespace
     }
 
     void render(
+        IInteractiveRender*     irenderer,
         asr::Project&           project,
         const RendererSettings& settings,
         Bitmap*                 bitmap,
@@ -182,7 +183,8 @@ namespace
             static_cast<size_t>(settings.m_passes)
             * project.get_frame()->image().properties().m_tile_count;
 
-        RendererController renderer_controller(
+        InteractiveRendererController renderer_controller(
+            irenderer,
             progress_cb,
             &rendered_tile_count,
             total_tile_count);
@@ -230,7 +232,7 @@ AppleseedIInteractiveRender::~AppleseedIInteractiveRender(void)
     EndSession();
 }
 
-void AppleseedIInteractiveRender::PrepareProject()
+void AppleseedIInteractiveRender::RenderProject()
 {
     std::string previous_locale(std::setlocale(LC_ALL, "C"));
 
@@ -253,11 +255,11 @@ void AppleseedIInteractiveRender::PrepareProject()
     frame_rend_params.regxmax = frame_rend_params.regymax = 1;
     
     // Retrieve and tweak renderer settings.
-    RendererSettings renderer_settings;
+    RendererSettings renderer_settings = RendererSettings::defaults();
 
     // Collect the entities we're interested in.
-    if (m_progress_cb)
-        m_progress_cb->SetTitle(_T("Collecting Entities..."));
+    //if (m_progress_cb)
+    //    m_progress_cb->SetTitle(_T("Collecting Entities..."));
 
     MaxSceneEntities m_entities;
     m_entities.clear();
@@ -269,8 +271,8 @@ void AppleseedIInteractiveRender::PrepareProject()
     render_begin(m_entities.m_objects, time);
 
     // Build the project.
-    if (m_progress_cb)
-        m_progress_cb->SetTitle(_T("Building Project..."));
+    //if (m_progress_cb)
+    //    m_progress_cb->SetTitle(_T("Building Project..."));
 
     asf::auto_release_ptr<asr::Project> project(
         build_project(
@@ -284,13 +286,13 @@ void AppleseedIInteractiveRender::PrepareProject()
             m_bitmap,
             time));
 
-    if (m_progress_cb)
-        m_progress_cb->SetTitle(_T("Rendering..."));
+    //if (m_progress_cb)
+    //    m_progress_cb->SetTitle(_T("Rendering..."));
 
-    render(project.ref(), renderer_settings, m_bitmap, m_progress_cb);
+    render(this, project.ref(), renderer_settings, m_bitmap, m_progress_cb);
 
-    if (m_progress_cb)
-        m_progress_cb->SetTitle(_T("Done."));
+    //if (m_progress_cb)
+    //    m_progress_cb->SetTitle(_T("Done."));
 
     std::setlocale(LC_ALL, previous_locale.c_str());
 }
@@ -310,41 +312,45 @@ void AppleseedIInteractiveRender::update_loop_thread()
         m_current_progress = 0;
 
         DWORD stop_result = WAIT_TIMEOUT;
-        while (m_current_progress < 10 && stop_result != WAIT_OBJECT_0)
-        {
-            stop_result = WaitForSingleObject(m_stop_event, 0);
-            if (stop_result == WAIT_OBJECT_0)
-                break;
 
-            m_ui_thread_runner.PostMessageAndWait(m_current_progress, m_progress_cb);
+        RenderProject();
+        
+        //while (m_current_progress < 10 && stop_result != WAIT_OBJECT_0)
+        //{
+        //    stop_result = WaitForSingleObject(m_stop_event, 0);
+        //    if (stop_result == WAIT_OBJECT_0)
+        //        break;
 
-            bool done_rendering = false;
+        //    m_ui_thread_runner.PostMessageAndWait(m_current_progress, m_progress_cb);
 
-            if (true /*render_rti_frame(current_time, done_rendering)*/)
-            {
-                // Update the state of m_currently_rendering dynamically, such that IsRendering() returns false when rendering is done.
-                //m_currently_rendering = !done_rendering;
+        //    bool done_rendering = false;
 
-                //GetRenderMessageManager()->LogMessage(IRenderMessageManager::MessageSource::kSource_ActiveShadeRenderer, IRenderMessageManager::MessageType::kType_Progress, 0, _T("Progress Scene"));
+        //    if (true /*render_rti_frame(current_time, done_rendering)*/)
+        //    {
+        //        //RenderProject();
+        //        // Update the state of m_currently_rendering dynamically, such that IsRendering() returns false when rendering is done.
+        //        //m_currently_rendering = !done_rendering;
 
-            }
-            else
-            {
-                // Error
-                //GetRenderMessageManager()->LogMessage(IRenderMessageManager::MessageSource::kSource_ActiveShadeRenderer, IRenderMessageManager::MessageType::kType_Error, 0, _T("Error Updating Scene"));
-                // Abort rendering somehow
-            }
+        //        //GetRenderMessageManager()->LogMessage(IRenderMessageManager::MessageSource::kSource_ActiveShadeRenderer, IRenderMessageManager::MessageType::kType_Progress, 0, _T("Progress Scene"));
 
-            // When done iteration, sleep a while to avoid hogging the CPU.
-            //if (m_keeprendering)
-            stop_result = WaitForSingleObject(m_stop_event, 0);
-            if (stop_result != WAIT_OBJECT_0)
-                Sleep(450);
-            else
-                break;
+        //    }
+        //    else
+        //    {
+        //        // Error
+        //        //GetRenderMessageManager()->LogMessage(IRenderMessageManager::MessageSource::kSource_ActiveShadeRenderer, IRenderMessageManager::MessageType::kType_Error, 0, _T("Error Updating Scene"));
+        //        // Abort rendering somehow
+        //    }
 
-            m_current_progress++;
-        }
+        //    // When done iteration, sleep a while to avoid hogging the CPU.
+        //    //if (m_keeprendering)
+        //    stop_result = WaitForSingleObject(m_stop_event, 0);
+        //    if (stop_result != WAIT_OBJECT_0)
+        //        Sleep(450);
+        //    else
+        //        break;
+
+        //    m_current_progress++;
+        //}
         m_currently_rendering = false;
     }
 }
@@ -374,7 +380,7 @@ void AppleseedIInteractiveRender::BeginSession()
             return;
         }
 
-        m_ui_thread_runner.SetHook();
+        //m_ui_thread_runner.SetHook();
 
         //ToDo
         // Collect the entities we're interested in.
@@ -395,7 +401,7 @@ void AppleseedIInteractiveRender::BeginSession()
 
         //Somehow get messages when objects change in scene
         //Let renderer know to restart the render
-
+        
         // Create the thread for the render session
         m_interactiveRenderLoopThread = CreateThread(NULL, 0, updateLoopThread, this, 0, nullptr);
         DbgAssert(m_interactiveRenderLoopThread != nullptr);
@@ -404,6 +410,9 @@ void AppleseedIInteractiveRender::BeginSession()
 
 void AppleseedIInteractiveRender::EndSession()
 {
+    // Reset m_currently_rendering since we're definitely no longer rendering
+    m_currently_rendering = false;
+
     // Wait for the thread to finish
     if (m_interactiveRenderLoopThread != nullptr)
     {
@@ -421,11 +430,8 @@ void AppleseedIInteractiveRender::EndSession()
         CloseHandle(m_stop_event);
         m_stop_event = nullptr;
 
-        m_ui_thread_runner.UnHook();
+        //m_ui_thread_runner.UnHook();
     }
-
-    // Reset m_currently_rendering since we're definitely no longer rendering
-    m_currently_rendering = false;
 
     // Run maxscript garbage collection to get rid of any leftover "leaks" from AMG.
     //DbgVerify(ExecuteMAXScriptScript(_T("gc light:true"), true));
@@ -455,6 +461,16 @@ IIRenderMgr* AppleseedIInteractiveRender::GetIIRenderMgr(IIRenderMgr* pIIRenderM
 
 void AppleseedIInteractiveRender::SetBitmap(Bitmap* pDestBitmap)
 {
+    if (pDestBitmap)
+    {
+        auto test1 = pDestBitmap->Width();
+        auto test2 = pDestBitmap->Height();
+        auto test3 = pDestBitmap->Storage();
+        auto test4 = pDestBitmap->IsAutonomousVFB();
+        auto test5 = pDestBitmap->GetVFBData();
+        auto test6 = pDestBitmap->GetWindow();
+        auto test7 = pDestBitmap->Storage();
+    }
     m_bitmap = pDestBitmap;
 }
 

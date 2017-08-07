@@ -55,7 +55,7 @@ public:
     // IAbortable
     virtual void AbortRender() override;
 
-    void PrepareProject();
+    void RenderProject();
     static DWORD WINAPI updateLoopThread(LPVOID ptr);
     void update_loop_thread();
 

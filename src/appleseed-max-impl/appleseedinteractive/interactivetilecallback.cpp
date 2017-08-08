@@ -52,19 +52,23 @@ namespace asr = renderer;
 
 InteractiveTileCallback::InteractiveTileCallback(
     Bitmap*                         bitmap,
+    IIRenderMgr*                    iimanager,
     MainThreadRunner*               thread_runner,
     volatile foundation::uint32*    rendered_tile_count
     )
     : TileCallback(bitmap, rendered_tile_count)
-  , m_bitmap(bitmap)
-  , m_ui_thread_runner(thread_runner)
+    , m_bitmap(bitmap)
+    , m_iimanager(iimanager)
+    , m_ui_thread_runner(thread_runner)
 {
 }
 
 void InteractiveTileCallback::post_render(
-    const asr::Frame*   frame)
+    const asr::Frame* frame)
 {
     TileCallback::post_render(frame);
-    m_ui_thread_runner->PostUpdateMessage(m_bitmap);
+    if (m_iimanager->IsRendering())
+        m_iimanager->UpdateDisplay();
+    //m_ui_thread_runner->PostUpdateMessage(m_iimanager);
 }
 

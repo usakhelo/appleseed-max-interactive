@@ -60,10 +60,10 @@ void MainThreadRunner::PostMessageAndWait(int progress, IRenderProgressCallback*
     m_message_event = nullptr;
 }
 
-void MainThreadRunner::PostUpdateMessage(Bitmap* bitmap)
+void MainThreadRunner::PostUpdateMessage(IIRenderMgr* iimanager)
 {
     MessageData* message_data = new MessageData();
-    message_data->m_bitmap = bitmap;
+    message_data->m_manager = iimanager;
 
     if (!PostMessage(GetCOREInterface()->GetMAXHWnd(), WM_UPDATE_BITMAP, reinterpret_cast<WPARAM>(this), reinterpret_cast<LPARAM>(message_data)))
     {
@@ -124,5 +124,5 @@ void MainThreadRunner::MsgProcCallback(std::auto_ptr<MessageData> data)
 
 void MainThreadRunner::MsgUpdateBitmap(std::auto_ptr<MessageData> data)
 {
-    data->m_bitmap->RefreshWindow();
+    data->m_manager->UpdateDisplay(); // RefreshWindow();
 }

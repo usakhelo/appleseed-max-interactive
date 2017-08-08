@@ -52,7 +52,8 @@ class InteractiveTileCallback
 {
   public:
       InteractiveTileCallback(
-        Bitmap*                         bitmap ,
+        Bitmap*                         bitmap,
+        IIRenderMgr*                    iimanager,
         MainThreadRunner*               thread_runner,
         volatile foundation::uint32*    rendered_tile_count);
 
@@ -61,5 +62,6 @@ class InteractiveTileCallback
 
   private:
     Bitmap*                             m_bitmap;
+    IIRenderMgr*                        m_iimanager;
     MainThreadRunner*                   m_ui_thread_runner;
 };

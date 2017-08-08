@@ -191,7 +191,7 @@ namespace
             total_tile_count);
 
         // Create the tile callback.
-        InteractiveTileCallback tile_callback(bitmap, &ui_thread_runner, &rendered_tile_count);
+        InteractiveTileCallback tile_callback(bitmap, irenderer->GetIIRenderMgr(nullptr), &ui_thread_runner, &rendered_tile_count);
 
         // Create the master renderer.
         std::auto_ptr<asr::MasterRenderer> renderer(
@@ -259,8 +259,8 @@ void AppleseedIInteractiveRender::RenderProject()
     RendererSettings renderer_settings = RendererSettings::defaults();
 
     // Collect the entities we're interested in.
-    //if (m_progress_cb)
-    //    m_progress_cb->SetTitle(_T("Collecting Entities..."));
+    if (m_progress_cb)
+        m_progress_cb->SetTitle(_T("Collecting Entities..."));
 
     MaxSceneEntities m_entities;
     m_entities.clear();
@@ -272,8 +272,8 @@ void AppleseedIInteractiveRender::RenderProject()
     render_begin(m_entities.m_objects, time);
 
     // Build the project.
-    //if (m_progress_cb)
-    //    m_progress_cb->SetTitle(_T("Building Project..."));
+    if (m_progress_cb)
+        m_progress_cb->SetTitle(_T("Building Project..."));
 
     asf::auto_release_ptr<asr::Project> project(
         build_project(
@@ -287,8 +287,8 @@ void AppleseedIInteractiveRender::RenderProject()
             m_bitmap,
             time));
 
-    //if (m_progress_cb)
-    //    m_progress_cb->SetTitle(_T("Rendering..."));
+    if (m_progress_cb)
+        m_progress_cb->SetTitle(_T("Rendering..."));
 
     render(this, project.ref(), renderer_settings, m_bitmap, m_progress_cb, m_ui_thread_runner);
 

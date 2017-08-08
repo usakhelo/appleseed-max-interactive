@@ -17,6 +17,7 @@ struct MessageData
 {
     IRenderProgressCallback* m_progress_cb;
     Bitmap* m_bitmap;
+    IIRenderMgr* m_manager;
     int progress;
 };
 
@@ -28,7 +29,7 @@ public:
     void SetHook();
     void UnHook();
     void PostMessageAndWait(int progress, IRenderProgressCallback* progress_cb);
-    void PostUpdateMessage(Bitmap* bitmap);
+    void PostUpdateMessage(IIRenderMgr* bitmap);
 
     static LRESULT CALLBACK GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam);
 

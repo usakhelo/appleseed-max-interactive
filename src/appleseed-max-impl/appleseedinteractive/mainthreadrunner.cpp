@@ -60,6 +60,18 @@ void MainThreadRunner::PostMessageAndWait(int progress, IRenderProgressCallback*
     m_message_event = nullptr;
 }
 
+void MainThreadRunner::PostUpdateMessage(IIRenderMgr* iimanager)
+{
+    MessageData* message_data = new MessageData();
+    message_data->m_manager = iimanager;
+
+    if (!PostMessage(GetCOREInterface()->GetMAXHWnd(), WM_UPDATE_BITMAP, reinterpret_cast<WPARAM>(this), reinterpret_cast<LPARAM>(message_data)))
+    {
+        DebugPrint(_T("PostMessage failed (%d)\n"), GetLastError());
+        return;
+    }
+}
+
 LRESULT CALLBACK MainThreadRunner::GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
     if (nCode < 0)
@@ -68,12 +80,25 @@ LRESULT CALLBACK MainThreadRunner::GetMsgProc(int nCode, WPARAM wParam, LPARAM l
     MSG* msg = reinterpret_cast<MSG*>(lParam);
 
     if (nCode == HC_ACTION
-        && wParam == PM_REMOVE
-        && msg->message == WM_UPDATE_PROGRESS)
+        && wParam == PM_REMOVE)
     {
-        MainThreadRunner* object(reinterpret_cast<MainThreadRunner*>(msg->wParam));
-        std::auto_ptr<MessageData> data(reinterpret_cast<MessageData*>(msg->lParam));
-        object->MsgProcCallback(data);
+        switch (msg->message)
+        {
+            case (WM_UPDATE_PROGRESS):
+            {
+                MainThreadRunner* object(reinterpret_cast<MainThreadRunner*>(msg->wParam));
+                std::auto_ptr<MessageData> data(reinterpret_cast<MessageData*>(msg->lParam));
+                object->MsgProcCallback(data);
+            }
+                break;
+            case (WM_UPDATE_BITMAP):
+            {
+                MainThreadRunner* object(reinterpret_cast<MainThreadRunner*>(msg->wParam));
+                std::auto_ptr<MessageData> data(reinterpret_cast<MessageData*>(msg->lParam));
+                object->MsgUpdateBitmap(data);
+            }
+                break;
+        }
     }
 
     return CallNextHookEx(0, nCode, wParam, lParam);
@@ -95,4 +120,9 @@ void MainThreadRunner::MsgProcCallback(std::auto_ptr<MessageData> data)
             DebugPrint(_T("SetEvent m_message_event failed (%d)\n"), GetLastError());
         }
     }
+}
+
+void MainThreadRunner::MsgUpdateBitmap(std::auto_ptr<MessageData> data)
+{
+    data->m_manager->UpdateDisplay(); // RefreshWindow();
 }

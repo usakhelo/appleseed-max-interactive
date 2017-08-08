@@ -26,53 +26,42 @@
 // THE SOFTWARE.
 //
 
-// Interface header.
-#include "interactiverenderercontroller.h"
+#pragma once
 
-//// appleseed-max headers.
-//#include "appleseedinteractive.h"
+// appleseed-max headers.
+#include "appleseedinteractive/mainthreadrunner.h"
+#include "appleseedrenderer/tilecallback.h"
+
+// appleseed.renderer headers.
+#include "renderer/api/rendering.h"
 
 // appleseed.foundation headers.
-#include "foundation/platform/atomic.h"
-#include "foundation/platform/windows.h"    // include before 3ds Max headers
+#include "foundation/image/tile.h"
+#include "foundation/platform/types.h"
 
-// 3ds Max headers.
-#include "interactiverender.h"
-#include "render.h"
+// Standard headers.
+#include <cstddef>
+#include <memory>
 
-namespace asf = foundation;
-namespace asr = renderer;
+// Forward declarations.
+namespace renderer  { class Frame; }
+class Bitmap;
 
-InteractiveRendererController::InteractiveRendererController(
-    IInteractiveRender*     renderer,
-    RendProgressCallback*   progress_cb,
-    volatile asf::uint32*   rendered_tile_count,
-    const size_t            total_tile_count)
-  : m_progress_cb(progress_cb)
-  , m_renderer(renderer)
-  , m_rendered_tile_count(rendered_tile_count)
-  , m_total_tile_count(total_tile_count)
-  , m_status(ContinueRendering)
+class InteractiveTileCallback
+  : public TileCallback
 {
-}
+  public:
+      InteractiveTileCallback(
+        Bitmap*                         bitmap,
+        IIRenderMgr*                    iimanager,
+        MainThreadRunner*               thread_runner,
+        volatile foundation::uint32*    rendered_tile_count);
 
-void InteractiveRendererController::on_rendering_begin()
-{
-    m_status = ContinueRendering;
-}
+    virtual void post_render(
+        const renderer::Frame*  frame) override;
 
-void InteractiveRendererController::on_progress()
-{
-    const int done =
-        static_cast<int>(asf::atomic_read(m_rendered_tile_count));
-    const int total = static_cast<int>(m_total_tile_count);
-
-    m_status = m_renderer->IsRendering()
-            ? ContinueRendering
-            : AbortRendering;
-}
-
-asr::IRendererController::Status InteractiveRendererController::get_status() const
-{
-    return m_status;
-}
+  private:
+    Bitmap*                             m_bitmap;
+    IIRenderMgr*                        m_iimanager;
+    MainThreadRunner*                   m_ui_thread_runner;
+};

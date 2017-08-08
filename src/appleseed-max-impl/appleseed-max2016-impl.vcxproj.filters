@@ -60,6 +60,9 @@
     <ClCompile Include="appleseedinteractive\interacitverenderercontroller.cpp">
       <Filter>appleseedinteractive</Filter>
     </ClCompile>
+    <ClCompile Include="appleseedinteractive\interactivetilecallback.cpp">
+      <Filter>appleseedinteractive</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="appleseedrenderer\appleseedrenderer.h">
@@ -163,6 +166,9 @@
       <Filter>appleseedinteractive</Filter>
     </ClInclude>
     <ClInclude Include="appleseedinteractive\interactiverenderercontroller.h">
+      <Filter>appleseedinteractive</Filter>
+    </ClInclude>
+    <ClInclude Include="appleseedinteractive\interactivetilecallback.h">
       <Filter>appleseedinteractive</Filter>
     </ClInclude>
   </ItemGroup>

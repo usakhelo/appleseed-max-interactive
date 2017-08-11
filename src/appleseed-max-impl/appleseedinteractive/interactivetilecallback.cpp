@@ -71,7 +71,9 @@ VOID CALLBACK InteractiveTileCallback::SendAsyncProc(HWND hwnd, UINT uMsg, ULONG
 VOID CALLBACK InteractiveTileCallback::TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
 {
     DebugPrint(_T("idEvent: %d\n"), idEvent);
-    KillTimer(GetCOREInterface()->GetMAXHWnd();
+    KillTimer(GetCOREInterface()->GetMAXHWnd(), idEvent);
+    //if (m_iimanager->IsRendering())
+    //    m_iimanager->UpdateDisplay();
 }
 
 void InteractiveTileCallback::post_render(
@@ -79,17 +81,7 @@ void InteractiveTileCallback::post_render(
 {
     TileCallback::post_render(frame);
 
-    //MSG msg;
     int IDT_TIMER1 = 1001;
     SetTimer(GetCOREInterface()->GetMAXHWnd(), IDT_TIMER1, 0, TimerProc);
-    //SendMessageCallback(GetCOREInterface()->GetMAXHWnd(), WM_NULL, NULL, NULL, SendAsyncProc, reinterpret_cast<ULONG_PTR>(this));
-    //GetMessage(&msg, GetCOREInterface()->GetMAXHWnd(), WM_NULL, WM_NULL);
-
-    Sleep(250);
-
-    //SendMessage(GetCOREInterface()->GetMAXHWnd(), WM_TIMER, IDT_TIMER1, reinterpret_cast<LPARAM>(TimerProc));
-    
-    //if (m_iimanager->IsRendering())
-    //    m_iimanager->UpdateDisplay();
-    //m_ui_thread_runner->PostUpdateMessage(m_iimanager);
+    //wait here until timer proc gets called
 }

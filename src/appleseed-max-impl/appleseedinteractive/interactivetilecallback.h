@@ -54,14 +54,15 @@ class InteractiveTileCallback
       InteractiveTileCallback(
         Bitmap*                         bitmap,
         IIRenderMgr*                    iimanager,
-        MainThreadRunner*               thread_runner,
         volatile foundation::uint32*    rendered_tile_count);
 
     virtual void post_render(
         const renderer::Frame*  frame) override;
 
+    static VOID CALLBACK SendAsyncProc(HWND hwnd, UINT uMsg, ULONG_PTR dwData, LRESULT lResult);
+    static VOID CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
+    IIRenderMgr*                        m_iimanager;
+
   private:
     Bitmap*                             m_bitmap;
-    IIRenderMgr*                        m_iimanager;
-    MainThreadRunner*                   m_ui_thread_runner;
 };

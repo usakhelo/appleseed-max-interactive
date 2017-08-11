@@ -173,8 +173,7 @@ namespace
         asr::Project&           project,
         const RendererSettings& settings,
         Bitmap*                 bitmap,
-        RendProgressCallback*   progress_cb,
-        MainThreadRunner        ui_thread_runner)
+        RendProgressCallback*   progress_cb)
     {
         // Number of rendered tiles, shared counter accessed atomically.
         volatile asf::uint32 rendered_tile_count = 0;
@@ -191,7 +190,7 @@ namespace
             total_tile_count);
 
         // Create the tile callback.
-        InteractiveTileCallback tile_callback(bitmap, irenderer->GetIIRenderMgr(nullptr), &ui_thread_runner, &rendered_tile_count);
+        InteractiveTileCallback tile_callback(bitmap, irenderer->GetIIRenderMgr(nullptr), &rendered_tile_count);
 
         // Create the master renderer.
         std::auto_ptr<asr::MasterRenderer> renderer(
@@ -290,7 +289,7 @@ void AppleseedIInteractiveRender::RenderProject()
     if (m_progress_cb)
         m_progress_cb->SetTitle(_T("Rendering..."));
 
-    render(this, project.ref(), renderer_settings, m_bitmap, m_progress_cb, m_ui_thread_runner);
+    render(this, project.ref(), renderer_settings, m_bitmap, m_progress_cb);
 
     //if (m_progress_cb)
     //    m_progress_cb->SetTitle(_T("Done."));
@@ -355,7 +354,7 @@ void AppleseedIInteractiveRender::BeginSession()
         //Somehow get messages when objects change in scene
         //Let renderer know to restart the render
         
-        m_ui_thread_runner.SetHook();
+        //m_ui_thread_runner.SetHook();
         // Create the thread for the render session
         m_interactiveRenderLoopThread = CreateThread(NULL, 0, updateLoopThread, this, 0, nullptr);
         DbgAssert(m_interactiveRenderLoopThread != nullptr);
@@ -373,7 +372,7 @@ void AppleseedIInteractiveRender::EndSession()
         WaitForSingleObject(m_interactiveRenderLoopThread, INFINITE);
         CloseHandle(m_interactiveRenderLoopThread);
         m_interactiveRenderLoopThread = nullptr;
-        m_ui_thread_runner.UnHook();
+        //m_ui_thread_runner.UnHook();
     }
 
     // Run maxscript garbage collection to get rid of any leftover "leaks" from AMG.

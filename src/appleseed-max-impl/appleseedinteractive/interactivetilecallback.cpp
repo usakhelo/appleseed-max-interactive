@@ -53,22 +53,43 @@ namespace asr = renderer;
 InteractiveTileCallback::InteractiveTileCallback(
     Bitmap*                         bitmap,
     IIRenderMgr*                    iimanager,
-    MainThreadRunner*               thread_runner,
     volatile foundation::uint32*    rendered_tile_count
     )
     : TileCallback(bitmap, rendered_tile_count)
     , m_bitmap(bitmap)
     , m_iimanager(iimanager)
-    , m_ui_thread_runner(thread_runner)
 {
+}
+
+VOID CALLBACK InteractiveTileCallback::SendAsyncProc(HWND hwnd, UINT uMsg, ULONG_PTR dwData, LRESULT lResult)
+{
+    InteractiveTileCallback* pRRTInteractive = reinterpret_cast<InteractiveTileCallback*>(dwData);
+    if (pRRTInteractive->m_iimanager->IsRendering())
+        pRRTInteractive->m_iimanager->UpdateDisplay();
+}
+
+VOID CALLBACK InteractiveTileCallback::TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
+{
+    DebugPrint(_T("idEvent: %d\n"), idEvent);
+    KillTimer(GetCOREInterface()->GetMAXHWnd();
 }
 
 void InteractiveTileCallback::post_render(
     const asr::Frame* frame)
 {
     TileCallback::post_render(frame);
-    if (m_iimanager->IsRendering())
-        m_iimanager->UpdateDisplay();
+
+    //MSG msg;
+    int IDT_TIMER1 = 1001;
+    SetTimer(GetCOREInterface()->GetMAXHWnd(), IDT_TIMER1, 0, TimerProc);
+    //SendMessageCallback(GetCOREInterface()->GetMAXHWnd(), WM_NULL, NULL, NULL, SendAsyncProc, reinterpret_cast<ULONG_PTR>(this));
+    //GetMessage(&msg, GetCOREInterface()->GetMAXHWnd(), WM_NULL, WM_NULL);
+
+    Sleep(250);
+
+    //SendMessage(GetCOREInterface()->GetMAXHWnd(), WM_TIMER, IDT_TIMER1, reinterpret_cast<LPARAM>(TimerProc));
+    
+    //if (m_iimanager->IsRendering())
+    //    m_iimanager->UpdateDisplay();
     //m_ui_thread_runner->PostUpdateMessage(m_iimanager);
 }
-

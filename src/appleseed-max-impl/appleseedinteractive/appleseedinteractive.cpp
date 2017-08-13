@@ -5,6 +5,7 @@
 // appleseed-max headers.
 #include "appleseedinteractive/interactiverenderercontroller.h"
 #include "appleseedinteractive/interactivetilecallback.h"
+#include "appleseedinteractive/interactivesession.h"
 #include "appleseedrenderer/appleseedrenderer.h"
 #include "appleseedrenderer/projectbuilder.h"
 
@@ -16,7 +17,6 @@
 // appleseed.foundation headers.
 #include "foundation/image/image.h"
 #include "foundation/platform/types.h"
-#include "foundation/utility/autoreleaseptr.h"
 
 // 3ds Max headers.
 #include "Rendering/IRenderMessageManager.h"
@@ -167,42 +167,6 @@ namespace
 
         proc.EndEnumeration();
     }
-
-    void render(
-        IInteractiveRender*     irenderer,
-        asr::Project&           project,
-        const RendererSettings& settings,
-        Bitmap*                 bitmap,
-        RendProgressCallback*   progress_cb)
-    {
-        // Number of rendered tiles, shared counter accessed atomically.
-        volatile asf::uint32 rendered_tile_count = 0;
-
-        // Create the renderer controller.
-        const size_t total_tile_count =
-            static_cast<size_t>(settings.m_passes)
-            * project.get_frame()->image().properties().m_tile_count;
-
-        InteractiveRendererController renderer_controller(
-            irenderer,
-            progress_cb,
-            &rendered_tile_count,
-            total_tile_count);
-
-        // Create the tile callback.
-        InteractiveTileCallback tile_callback(bitmap, irenderer->GetIIRenderMgr(nullptr), &rendered_tile_count);
-
-        // Create the master renderer.
-        std::auto_ptr<asr::MasterRenderer> renderer(
-            new asr::MasterRenderer(
-                project,
-                project.configurations().get_by_name("interactive")->get_inherited_parameters(),
-                &renderer_controller,
-                &tile_callback));
-
-        // Render the frame.
-        renderer->render();
-    }
 }
 
 //
@@ -222,6 +186,7 @@ AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& rend
     , m_view_exp(nullptr)
     , m_progress_cb(nullptr)
     , m_interactiveRenderLoopThread(nullptr)
+    , m_render_session(nullptr)
     , m_stop_event(nullptr)
 {
 }
@@ -232,7 +197,7 @@ AppleseedIInteractiveRender::~AppleseedIInteractiveRender(void)
     EndSession();
 }
 
-void AppleseedIInteractiveRender::RenderProject()
+asf::auto_release_ptr<asr::Project> AppleseedIInteractiveRender::prepare_project(const RendererSettings& renderer_settings)
 {
     std::string previous_locale(std::setlocale(LC_ALL, "C"));
 
@@ -254,9 +219,6 @@ void AppleseedIInteractiveRender::RenderProject()
     frame_rend_params.regxmin = frame_rend_params.regymin = 0;
     frame_rend_params.regxmax = frame_rend_params.regymax = 1;
     
-    // Retrieve and tweak renderer settings.
-    RendererSettings renderer_settings = RendererSettings::defaults();
-
     // Collect the entities we're interested in.
     if (m_progress_cb)
         m_progress_cb->SetTitle(_T("Collecting Entities..."));
@@ -286,15 +248,9 @@ void AppleseedIInteractiveRender::RenderProject()
             m_bitmap,
             time));
 
-    if (m_progress_cb)
-        m_progress_cb->SetTitle(_T("Rendering..."));
-
-    render(this, project.ref(), renderer_settings, m_bitmap, m_progress_cb);
-
-    //if (m_progress_cb)
-    //    m_progress_cb->SetTitle(_T("Done."));
-
     std::setlocale(LC_ALL, previous_locale.c_str());
+
+    return project;
 }
 
 DWORD WINAPI AppleseedIInteractiveRender::updateLoopThread(LPVOID ptr)
@@ -309,7 +265,6 @@ void AppleseedIInteractiveRender::update_loop_thread()
     if (DbgVerify(m_progress_cb != nullptr))
     {
         m_currently_rendering = true;
-        RenderProject();
         
         m_currently_rendering = false;
     }
@@ -328,52 +283,54 @@ void AppleseedIInteractiveRender::BeginSession()
 {
     if (m_interactiveRenderLoopThread == nullptr)
     {
-        const TimeValue current_time = GetCOREInterface()->GetTime();
+        // Retrieve and tweak renderer settings.
+        RendererSettings renderer_settings = RendererSettings::defaults();
 
-        // Pre-eval notification needs to be sent before scene nodes are evaluated, and called again whenever the time changes
-        TimeValue eval_time = current_time;  // To avoid const_cast below, and possibility of notifiee from changing the value
-                                             //!! TODO Kirin: Maybe stop broadcasting this, it's evil to broadcast notifications like this in active shade - I would need
-                                             // to replace this with a different mechanism.
-        BroadcastNotification(NOTIFY_RENDER_PREEVAL, &eval_time);
-        m_last_pre_eval_notification_broadcast_time = current_time;
+        m_render_session = new InteractiveSession(
+            m_iirender_mgr, 
+            prepare_project(renderer_settings),
+            renderer_settings,
+            m_bitmap,
+            m_progress_cb);
+
+        m_render_session->m_currently_rendering = &m_currently_rendering;
+
+        if (m_progress_cb)
+            m_progress_cb->SetTitle(_T("Rendering..."));
+
+        // Create the thread for the render session
+        m_interactiveRenderLoopThread = CreateThread(NULL, 0, m_render_session->render_thread_runner, m_render_session, 0, nullptr);
 
         //ToDo
-        // Collect the entities we're interested in.
-        // Call RenderBegin() on all object instances.
-        // Build the project.
-        // Create RendererController
-        // Create TileCallback
-        // Create the master renderer.
-        //std::auto_ptr<asr::MasterRenderer> renderer(
-        //  new asr::MasterRenderer(
-        //    project,
-        //    project.configurations().get_by_name("interactive")->get_inherited_parameters(),
-        //    &renderer_controller,
-        //    &tile_callback));
         // Render the frame.
         //Somehow get messages when objects change in scene
         //Let renderer know to restart the render
         
-        //m_ui_thread_runner.SetHook();
-        // Create the thread for the render session
-        m_interactiveRenderLoopThread = CreateThread(NULL, 0, updateLoopThread, this, 0, nullptr);
         DbgAssert(m_interactiveRenderLoopThread != nullptr);
     }
 }
 
 void AppleseedIInteractiveRender::EndSession()
 {
-    // Reset m_currently_rendering since we're definitely no longer rendering
-    m_currently_rendering = false;
-
     // Wait for the thread to finish
     if (m_interactiveRenderLoopThread != nullptr)
     {
         WaitForSingleObject(m_interactiveRenderLoopThread, INFINITE);
         CloseHandle(m_interactiveRenderLoopThread);
         m_interactiveRenderLoopThread = nullptr;
-        //m_ui_thread_runner.UnHook();
     }
+
+    if (m_render_session != nullptr)
+    {
+        delete m_render_session;
+        m_render_session = nullptr;
+    }
+
+    // Reset m_currently_rendering since we're definitely no longer rendering
+    m_currently_rendering = false;
+
+    if (m_progress_cb)
+        m_progress_cb->SetTitle(_T("Done."));
 
     // Run maxscript garbage collection to get rid of any leftover "leaks" from AMG.
     //DbgVerify(ExecuteMAXScriptScript(_T("gc light:true"), true));

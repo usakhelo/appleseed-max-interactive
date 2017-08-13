@@ -39,14 +39,14 @@
 
 // Forward declarations.
 class RendProgressCallback;
-class IInteractiveRender;
+class IIRenderMgr;
 
 class InteractiveRendererController
   : public renderer::DefaultRendererController
 {
   public:
     InteractiveRendererController(
-        IInteractiveRender*             renderer,
+        IIRenderMgr*                    renderer,
         RendProgressCallback*           progress_cb,
         volatile foundation::uint32*    rendered_tile_count,
         const size_t                    total_tile_count);
@@ -58,7 +58,7 @@ class InteractiveRendererController
     virtual Status get_status() const override;
 
   private:
-    IInteractiveRender*                 m_renderer;
+    IIRenderMgr*                        m_renderer;
     RendProgressCallback*               m_progress_cb;
     volatile foundation::uint32*        m_rendered_tile_count;
     const size_t                        m_total_tile_count;

@@ -29,7 +29,6 @@
 #pragma once
 
 // appleseed-max headers.
-#include "appleseedinteractive/mainthreadrunner.h"
 #include "appleseedrenderer/tilecallback.h"
 
 // appleseed.renderer headers.
@@ -38,6 +37,7 @@
 // appleseed.foundation headers.
 #include "foundation/image/tile.h"
 #include "foundation/platform/types.h"
+#include "foundation/platform/windows.h"    // include before 3ds Max headers
 
 // Standard headers.
 #include <cstddef>
@@ -46,6 +46,7 @@
 // Forward declarations.
 namespace renderer  { class Frame; }
 class Bitmap;
+class IIRenderMgr;
 
 class InteractiveTileCallback
   : public TileCallback

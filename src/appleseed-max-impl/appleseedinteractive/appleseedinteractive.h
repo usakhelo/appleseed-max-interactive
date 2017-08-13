@@ -1,7 +1,10 @@
 #pragma once
 
 // appleseed-max headers.
-#include "appleseedinteractive/mainthreadrunner.h"
+#include "appleseedrenderer/renderersettings.h"
+
+// appleseed.foundation headers.
+#include "foundation/utility/autoreleaseptr.h"
 
 // 3ds Max headers.
 #include "Rendering/IAbortableRenderer.h"
@@ -11,8 +14,13 @@
 #include <vector>
 
 // Forward declarations.
+namespace renderer { class Project; }
 class AppleseedRenderer;
 class MainThreadRunner;
+class InteractiveSession;
+
+namespace asf = foundation;
+namespace asr = renderer;
 
 class AppleseedIInteractiveRender
     : public IInteractiveRender
@@ -55,16 +63,16 @@ public:
     // IAbortable
     virtual void AbortRender() override;
 
-    void RenderProject();
+    asf::auto_release_ptr<asr::Project> prepare_project(const RendererSettings& render_settings);
     static DWORD WINAPI updateLoopThread(LPVOID ptr);
     void update_loop_thread();
     void render_thread();
 
-    TimeValue                   m_last_pre_eval_notification_broadcast_time;
     HANDLE                      m_interactiveRenderLoopThread;
     HANDLE                      m_stop_event;
 
 private:
+    InteractiveSession*         m_render_session;
     Bitmap*                     m_bitmap;
     int                         m_current_progress;
     bool                        m_currently_rendering;
@@ -78,6 +86,4 @@ private:
     ViewExp*                    m_view_exp;
     INode*                      m_view_inode;
     bool                        m_use_view_inode;
-
-    MainThreadRunner            m_ui_thread_runner;
 };

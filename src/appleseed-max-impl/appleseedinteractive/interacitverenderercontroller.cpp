@@ -44,12 +44,12 @@ namespace asf = foundation;
 namespace asr = renderer;
 
 InteractiveRendererController::InteractiveRendererController(
-    IInteractiveRender*     renderer,
+    IIRenderMgr*            renderer,
     RendProgressCallback*   progress_cb,
     volatile asf::uint32*   rendered_tile_count,
     const size_t            total_tile_count)
-  : m_progress_cb(progress_cb)
-  , m_renderer(renderer)
+  : m_renderer(renderer)
+  , m_progress_cb(progress_cb)
   , m_rendered_tile_count(rendered_tile_count)
   , m_total_tile_count(total_tile_count)
   , m_status(ContinueRendering)

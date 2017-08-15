@@ -64,9 +64,6 @@ public:
     virtual void AbortRender() override;
 
     asf::auto_release_ptr<asr::Project> prepare_project(const RendererSettings& render_settings);
-    static DWORD WINAPI updateLoopThread(LPVOID ptr);
-    void update_loop_thread();
-    void render_thread();
 
     HANDLE                      m_interactiveRenderLoopThread;
     HANDLE                      m_stop_event;

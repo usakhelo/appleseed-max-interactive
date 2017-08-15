@@ -50,6 +50,8 @@
 namespace asf = foundation;
 namespace asr = renderer;
 
+#define WM_TRIGGER_CALLBACK WM_USER+4764
+
 InteractiveTileCallback::InteractiveTileCallback(
     Bitmap*                         bitmap,
     IIRenderMgr*                    iimanager,
@@ -59,13 +61,6 @@ InteractiveTileCallback::InteractiveTileCallback(
     , m_bitmap(bitmap)
     , m_iimanager(iimanager)
 {
-}
-
-VOID CALLBACK InteractiveTileCallback::SendAsyncProc(HWND hwnd, UINT uMsg, ULONG_PTR dwData, LRESULT lResult)
-{
-    InteractiveTileCallback* pRRTInteractive = reinterpret_cast<InteractiveTileCallback*>(dwData);
-    if (pRRTInteractive->m_iimanager->IsRendering())
-        pRRTInteractive->m_iimanager->UpdateDisplay();
 }
 
 VOID CALLBACK InteractiveTileCallback::TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
@@ -83,5 +78,19 @@ void InteractiveTileCallback::post_render(
 
     int IDT_TIMER1 = 1001;
     SetTimer(GetCOREInterface()->GetMAXHWnd(), IDT_TIMER1, 0, TimerProc);
+    InteractiveSession* session_object = static_cast<InteractiveSession*>(ptr);
+
+    PostCallback((UINT_PTR)InteractiveTileCallback::update_window, (UINT_PTR)this);
     //wait here until timer proc gets called
+
+
+}
+
+void InteractiveTileCallback::PostCallback(void(*funcPtr)(UINT_PTR), UINT_PTR param)
+{
+  PostMessage(GetCOREInterface()->GetMAXHWnd(), WM_TRIGGER_CALLBACK, (UINT_PTR)funcPtr, (UINT_PTR)param);
+}
+
+void InteractiveTileCallback::update_window()
+{
 }

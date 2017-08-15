@@ -253,35 +253,13 @@ asf::auto_release_ptr<asr::Project> AppleseedIInteractiveRender::prepare_project
     return project;
 }
 
-DWORD WINAPI AppleseedIInteractiveRender::updateLoopThread(LPVOID ptr)
-{
-    AppleseedIInteractiveRender* pRRTInteractive = static_cast<AppleseedIInteractiveRender*>(ptr);
-    pRRTInteractive->update_loop_thread();
-    return 0;
-}
-
-void AppleseedIInteractiveRender::update_loop_thread()
-{
-    if (DbgVerify(m_progress_cb != nullptr))
-    {
-        m_currently_rendering = true;
-        
-        m_currently_rendering = false;
-    }
-}
-
-void AppleseedIInteractiveRender::render_thread()
-{
-    //render(this, project.ref(), renderer_settings, m_bitmap, m_progress_cb);
-}
-
 //
 // IInteractiveRender implementation
 //
 
 void AppleseedIInteractiveRender::BeginSession()
 {
-    if (m_interactiveRenderLoopThread == nullptr)
+    if (m_render_session == nullptr)
     {
         // Retrieve and tweak renderer settings.
         RendererSettings renderer_settings = RendererSettings::defaults();
@@ -298,27 +276,31 @@ void AppleseedIInteractiveRender::BeginSession()
         if (m_progress_cb)
             m_progress_cb->SetTitle(_T("Rendering..."));
 
+        m_render_session->start_render();
+
         // Create the thread for the render session
-        m_interactiveRenderLoopThread = CreateThread(NULL, 0, m_render_session->render_thread_runner, m_render_session, 0, nullptr);
+        //m_interactiveRenderLoopThread = CreateThread(NULL, 0, m_render_session->render_thread_runner, m_render_session, 0, nullptr);
 
         //ToDo
         // Render the frame.
         //Somehow get messages when objects change in scene
         //Let renderer know to restart the render
         
-        DbgAssert(m_interactiveRenderLoopThread != nullptr);
+        //DbgAssert(m_interactiveRenderLoopThread != nullptr);
     }
 }
 
 void AppleseedIInteractiveRender::EndSession()
 {
+    m_render_session->end_render();
+
     // Wait for the thread to finish
-    if (m_interactiveRenderLoopThread != nullptr)
-    {
-        WaitForSingleObject(m_interactiveRenderLoopThread, INFINITE);
-        CloseHandle(m_interactiveRenderLoopThread);
-        m_interactiveRenderLoopThread = nullptr;
-    }
+    //if (m_interactiveRenderLoopThread != nullptr)
+    //{
+    //    WaitForSingleObject(m_interactiveRenderLoopThread, INFINITE);
+    //    CloseHandle(m_interactiveRenderLoopThread);
+    //    m_interactiveRenderLoopThread = nullptr;
+    //}
 
     if (m_render_session != nullptr)
     {
@@ -335,7 +317,7 @@ void AppleseedIInteractiveRender::EndSession()
     // Run maxscript garbage collection to get rid of any leftover "leaks" from AMG.
     //DbgVerify(ExecuteMAXScriptScript(_T("gc light:true"), true));
 
-    DbgAssert(m_interactiveRenderLoopThread == nullptr);
+    //DbgAssert(m_interactiveRenderLoopThread == nullptr);
 }
 
 void AppleseedIInteractiveRender::SetOwnerWnd(HWND hOwnerWnd)

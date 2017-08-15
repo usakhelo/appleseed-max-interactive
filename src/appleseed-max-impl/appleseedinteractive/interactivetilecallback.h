@@ -60,7 +60,8 @@ class InteractiveTileCallback
     virtual void post_render(
         const renderer::Frame*  frame) override;
 
-    static VOID CALLBACK SendAsyncProc(HWND hwnd, UINT uMsg, ULONG_PTR dwData, LRESULT lResult);
+    void update_window();
+
     static VOID CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
     IIRenderMgr*                        m_iimanager;
 

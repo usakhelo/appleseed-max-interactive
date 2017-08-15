@@ -22,6 +22,9 @@
 #include "bitmap.h"
 #include "interactiverender.h"
 
+#include <thread>
+#include <future>
+
 InteractiveSession::InteractiveSession(
     IIRenderMgr*                            iirender_mgr,
     asf::auto_release_ptr<asr::Project>     project,
@@ -78,4 +81,23 @@ void InteractiveSession::render_thread()
     renderer->render();
 
     *m_currently_rendering = false;
+}
+
+void InteractiveSession::start_render()
+{
+  //m_interactiveRenderLoopThread = CreateThread(NULL, 0, m_render_session->render_thread_runner, m_render_session, 0, nullptr);
+
+  //std::promise<int> accumulate_promise;
+  //std::future<int> accumulate_future = accumulate_promise.get_future();
+
+  m_render_thread = std::thread(InteractiveSession::render_thread); // , std::move(accumulate_promise));
+  //accumulate_future.wait();  // wait for result
+}
+
+void InteractiveSession::abort_render()
+{
+}
+
+void InteractiveSession::end_render()
+{
 }

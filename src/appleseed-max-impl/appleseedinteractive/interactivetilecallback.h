@@ -61,6 +61,7 @@ class InteractiveTileCallback
         const renderer::Frame*  frame) override;
 
     void update_window();
+    void PostCallback(void(*funcPtr)(UINT_PTR), UINT_PTR param);
 
     static VOID CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
     IIRenderMgr*                        m_iimanager;

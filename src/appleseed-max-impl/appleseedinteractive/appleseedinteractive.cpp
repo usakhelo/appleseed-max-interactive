@@ -449,12 +449,14 @@ BOOL AppleseedIInteractiveRender::IsRendering()
 
 void AppleseedIInteractiveRender::AbortRender()
 {
+
+    m_render_session->abort_render();
+
     MSG msg;
     while (PeekMessage(&msg, GetCOREInterface()->GetMAXHWnd(), 0, 0, PM_REMOVE)) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
 
-    m_render_session->abort_render();
     EndSession();
 }

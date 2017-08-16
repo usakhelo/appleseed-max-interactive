@@ -27,7 +27,7 @@
 //
 
 // Interface header.
-#include "interactivetilecallback.h"
+#include "appleseedinteractive/interactivetilecallback.h"
 
 // appleseed.renderer headers.
 #include "renderer/api/frame.h"
@@ -55,11 +55,13 @@ namespace asr = renderer;
 
 InteractiveTileCallback::InteractiveTileCallback(
     Bitmap*                         bitmap,
-    IIRenderMgr*                    iimanager
+    IIRenderMgr*                    iimanager,
+    asr::IRendererController*   render_controller
     )
     : TileCallback(bitmap, 0)
     , m_bitmap(bitmap)
     , m_iimanager(iimanager)
+    , m_renderer_ctrl(render_controller)
 {
 }
 
@@ -80,14 +82,16 @@ void InteractiveTileCallback::update_caller(UINT_PTR param_ptr)
 void InteractiveTileCallback::post_render(
     const asr::Frame* frame)
 {
-    m_ui_promise = std::promise<void>();
     TileCallback::post_render(frame);
 
-    std::future<int> ui_future = m_ui_promise.get_future();
-    PostCallback(update_caller, (UINT_PTR)this);
-    
     //wait until ui proc gets handled to ensure class object is valid
-    ui_future.wait();
+    m_ui_promise = std::promise<void>();
+    if (m_renderer_ctrl->get_status() == asr::IRendererController::ContinueRendering)
+    {
+        std::future<int> ui_future = m_ui_promise.get_future();
+        PostCallback(update_caller, (UINT_PTR)this);
+        ui_future.wait();
+    }
 }
 
 void InteractiveTileCallback::PostCallback(void(*funcPtr)(UINT_PTR), UINT_PTR param)

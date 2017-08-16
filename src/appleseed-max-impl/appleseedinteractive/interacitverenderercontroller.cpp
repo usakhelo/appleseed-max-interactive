@@ -29,11 +29,7 @@
 // Interface header.
 #include "interactiverenderercontroller.h"
 
-//// appleseed-max headers.
-//#include "appleseedinteractive.h"
-
 // appleseed.foundation headers.
-#include "foundation/platform/atomic.h"
 #include "foundation/platform/windows.h"    // include before 3ds Max headers
 
 // 3ds Max headers.
@@ -57,19 +53,12 @@ void InteractiveRendererController::on_rendering_begin()
     m_status = ContinueRendering;
 }
 
-void InteractiveRendererController::on_progress()
-{
-    //m_status = m_renderer->IsRendering()
-    //        ? ContinueRendering
-    //        : AbortRendering;
-}
-
 asr::IRendererController::Status InteractiveRendererController::get_status() const
 {
     return m_status;
 }
 
-void InteractiveRendererController::stop_rendering()
+void InteractiveRendererController::abort_rendering()
 {
     m_status = AbortRendering;
 }

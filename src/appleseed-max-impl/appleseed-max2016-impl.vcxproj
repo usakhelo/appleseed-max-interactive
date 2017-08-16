@@ -233,7 +233,6 @@ copy /Y "$(SolutionDir)..\..\appleseed\sandbox\shaders\max\*.oso" "$(SolutionDir
     <ClCompile Include="appleseedinteractive\appleseedinteractive.cpp" />
     <ClCompile Include="appleseedinteractive\interacitverenderercontroller.cpp" />
     <ClCompile Include="appleseedinteractive\interactivesession.cpp" />
-    <ClCompile Include="appleseedinteractive\mainthreadrunner.cpp" />
     <ClCompile Include="appleseedinteractive\interactivetilecallback.cpp" />
     <ClCompile Include="appleseedobjpropsmod\appleseedobjpropsmod.cpp" />
     <ClCompile Include="iappleseedmtl.cpp" />
@@ -262,7 +261,6 @@ copy /Y "$(SolutionDir)..\..\appleseed\sandbox\shaders\max\*.oso" "$(SolutionDir
     <ClInclude Include="appleseedinteractive\appleseedinteractive.h" />
     <ClInclude Include="appleseedinteractive\interactiverenderercontroller.h" />
     <ClInclude Include="appleseedinteractive\interactivesession.h" />
-    <ClInclude Include="appleseedinteractive\mainthreadrunner.h" />
     <ClInclude Include="appleseedinteractive\interactivetilecallback.h" />
     <ClInclude Include="appleseedobjpropsmod\appleseedobjpropsmod.h" />
     <ClInclude Include="appleseedobjpropsmod\resource.h" />

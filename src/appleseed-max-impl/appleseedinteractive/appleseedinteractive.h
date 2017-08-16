@@ -1,3 +1,4 @@
+
 #pragma once
 
 // appleseed-max headers.
@@ -16,7 +17,6 @@
 // Forward declarations.
 namespace renderer { class Project; }
 class AppleseedRenderer;
-class MainThreadRunner;
 class InteractiveSession;
 
 namespace asf = foundation;

@@ -40,10 +40,10 @@ class InteractiveSession
     void end_render();
 
     std::unique_ptr<InteractiveRendererController>  m_render_ctrl;
-    std::thread                             m_render_thread;
-    Bitmap*                                 m_bitmap;
-    IIRenderMgr*                            m_iirender_mgr;
-    IRenderProgressCallback*                m_progress_cb;
-    asf::auto_release_ptr<asr::Project>     m_project;
-    RendererSettings                        m_renderer_settings;
+    std::thread                                     m_render_thread;
+    Bitmap*                                         m_bitmap;
+    IIRenderMgr*                                    m_iirender_mgr;
+    IRenderProgressCallback*                        m_progress_cb;
+    asf::auto_release_ptr<asr::Project>             m_project;
+    RendererSettings                                m_renderer_settings;
 };

@@ -55,7 +55,8 @@ class InteractiveTileCallback
   public:
       InteractiveTileCallback(
         Bitmap*                         bitmap,
-        IIRenderMgr*                    iimanager);
+        IIRenderMgr*                    iimanager,
+        renderer::IRendererController*  render_controller);
 
     virtual void post_render(const renderer::Frame* frame) override;
 
@@ -63,9 +64,10 @@ class InteractiveTileCallback
     void        PostCallback(void(*funcPtr)(UINT_PTR), UINT_PTR param);
     static void update_caller(UINT_PTR param_ptr);
 
-    IIRenderMgr*        m_iimanager;
-    std::promise<void>  m_ui_promise;
+    renderer::IRendererController*  m_renderer_ctrl;
+    IIRenderMgr*          m_iimanager;
+    std::promise<void>    m_ui_promise;
 
   private:
-    Bitmap*                             m_bitmap;
+    Bitmap*               m_bitmap;
 };

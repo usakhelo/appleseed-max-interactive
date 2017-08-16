@@ -51,10 +51,8 @@ class InteractiveRendererController
 
     virtual void on_rendering_begin() override;
 
-    virtual void on_progress() override;
-
     virtual Status get_status() const override;
-    void stop_rendering();
+    void abort_rendering();
 
   private:
     IIRenderMgr*                        m_renderer;

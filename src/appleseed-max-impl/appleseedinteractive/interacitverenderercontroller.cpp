@@ -45,13 +45,9 @@ namespace asr = renderer;
 
 InteractiveRendererController::InteractiveRendererController(
     IIRenderMgr*            renderer,
-    RendProgressCallback*   progress_cb,
-    volatile asf::uint32*   rendered_tile_count,
-    const size_t            total_tile_count)
+    RendProgressCallback*   progress_cb)
   : m_renderer(renderer)
   , m_progress_cb(progress_cb)
-  , m_rendered_tile_count(rendered_tile_count)
-  , m_total_tile_count(total_tile_count)
   , m_status(ContinueRendering)
 {
 }
@@ -63,16 +59,17 @@ void InteractiveRendererController::on_rendering_begin()
 
 void InteractiveRendererController::on_progress()
 {
-    const int done =
-        static_cast<int>(asf::atomic_read(m_rendered_tile_count));
-    const int total = static_cast<int>(m_total_tile_count);
-
-    m_status = m_renderer->IsRendering()
-            ? ContinueRendering
-            : AbortRendering;
+    //m_status = m_renderer->IsRendering()
+    //        ? ContinueRendering
+    //        : AbortRendering;
 }
 
 asr::IRendererController::Status InteractiveRendererController::get_status() const
 {
     return m_status;
+}
+
+void InteractiveRendererController::stop_rendering()
+{
+    m_status = AbortRendering;
 }

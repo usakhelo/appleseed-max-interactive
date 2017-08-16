@@ -47,20 +47,17 @@ class InteractiveRendererController
   public:
     InteractiveRendererController(
         IIRenderMgr*                    renderer,
-        RendProgressCallback*           progress_cb,
-        volatile foundation::uint32*    rendered_tile_count,
-        const size_t                    total_tile_count);
+        RendProgressCallback*           progress_cb);
 
     virtual void on_rendering_begin() override;
 
     virtual void on_progress() override;
 
     virtual Status get_status() const override;
+    void stop_rendering();
 
   private:
     IIRenderMgr*                        m_renderer;
     RendProgressCallback*               m_progress_cb;
-    volatile foundation::uint32*        m_rendered_tile_count;
-    const size_t                        m_total_tile_count;
     Status                              m_status;
 };

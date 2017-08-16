@@ -19,11 +19,10 @@
 #include "foundation/platform/windows.h"    // include before 3ds Max headers
 
 // 3ds Max headers.
+
 #include "bitmap.h"
 #include "interactiverender.h"
 
-#include <thread>
-#include <future>
 
 InteractiveSession::InteractiveSession(
     IIRenderMgr*                            iirender_mgr,
@@ -36,68 +35,56 @@ InteractiveSession::InteractiveSession(
     , m_renderer_settings(settings)
     , m_bitmap(bitmap)
     , m_progress_cb(progress_cb)
+    , m_render_ctrl(nullptr)
 {
-}
-
-DWORD InteractiveSession::render_thread_runner(LPVOID ptr)
-{
-    InteractiveSession* session_object = static_cast<InteractiveSession*>(ptr);
-    session_object->render_thread();
-    return 0;
-
 }
 
 void InteractiveSession::render_thread()
 {
-    *m_currently_rendering = true;
-
-    // Number of rendered tiles, shared counter accessed atomically.
-    volatile asf::uint32 rendered_tile_count = 0;
+    DebugPrint(_T("std::this_thread::get_id(): (%d)\n"), std::this_thread::get_id());
 
     asr::Project& project = m_project.ref();
 
     // Create the renderer controller.
-    const size_t total_tile_count = static_cast<size_t>(m_renderer_settings.m_passes)
-        * project.get_frame()->image().properties().m_tile_count;
 
-    InteractiveRendererController m_renderer_controller(
-        m_iirender_mgr,
-        m_progress_cb,
-        &rendered_tile_count,
-        total_tile_count);
+    if (m_render_ctrl != nullptr)
+        m_render_ctrl.reset(nullptr);
+
+    m_render_ctrl = std::unique_ptr<InteractiveRendererController>(new InteractiveRendererController(m_iirender_mgr, m_progress_cb));
 
     // Create the tile callback.
-    InteractiveTileCallback m_tile_callback(m_bitmap, m_iirender_mgr, &rendered_tile_count);
+    InteractiveTileCallback m_tile_callback(m_bitmap, m_iirender_mgr);
 
     // Create the master renderer.
     std::auto_ptr<asr::MasterRenderer> renderer(
         new asr::MasterRenderer(
             m_project.ref(),
             m_project.ref().configurations().get_by_name("interactive")->get_inherited_parameters(),
-            &m_renderer_controller,
+            m_render_ctrl.get(),
             &m_tile_callback));
 
     // Render the frame.
     renderer->render();
-
-    *m_currently_rendering = false;
 }
 
 void InteractiveSession::start_render()
 {
-  //m_interactiveRenderLoopThread = CreateThread(NULL, 0, m_render_session->render_thread_runner, m_render_session, 0, nullptr);
+    //m_interactiveRenderLoopThread = CreateThread(NULL, 0, m_render_session->render_thread_runner, m_render_session, 0, nullptr);
 
-  //std::promise<int> accumulate_promise;
-  //std::future<int> accumulate_future = accumulate_promise.get_future();
+    //std::promise<int> accumulate_promise;
+    //std::future<int> accumulate_future = accumulate_promise.get_future();
 
-  m_render_thread = std::thread(InteractiveSession::render_thread); // , std::move(accumulate_promise));
-  //accumulate_future.wait();  // wait for result
+    m_render_thread = std::thread(&InteractiveSession::render_thread, this); // , std::move(accumulate_promise));
+    //accumulate_future.wait();  // wait for result
 }
 
 void InteractiveSession::abort_render()
 {
+    m_render_ctrl->stop_rendering();
 }
 
 void InteractiveSession::end_render()
 {
+    if (m_render_thread.joinable())
+        m_render_thread.join();
 }

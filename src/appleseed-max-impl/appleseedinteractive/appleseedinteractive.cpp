@@ -271,10 +271,10 @@ void AppleseedIInteractiveRender::BeginSession()
             m_bitmap,
             m_progress_cb);
 
-        m_render_session->m_currently_rendering = &m_currently_rendering;
-
         if (m_progress_cb)
             m_progress_cb->SetTitle(_T("Rendering..."));
+
+        m_currently_rendering = true;
 
         m_render_session->start_render();
 
@@ -292,24 +292,15 @@ void AppleseedIInteractiveRender::BeginSession()
 
 void AppleseedIInteractiveRender::EndSession()
 {
-    m_render_session->end_render();
-
-    // Wait for the thread to finish
-    //if (m_interactiveRenderLoopThread != nullptr)
-    //{
-    //    WaitForSingleObject(m_interactiveRenderLoopThread, INFINITE);
-    //    CloseHandle(m_interactiveRenderLoopThread);
-    //    m_interactiveRenderLoopThread = nullptr;
-    //}
+    m_currently_rendering = false;
 
     if (m_render_session != nullptr)
     {
+        m_render_session->end_render();
+
         delete m_render_session;
         m_render_session = nullptr;
     }
-
-    // Reset m_currently_rendering since we're definitely no longer rendering
-    m_currently_rendering = false;
 
     if (m_progress_cb)
         m_progress_cb->SetTitle(_T("Done."));
@@ -458,5 +449,12 @@ BOOL AppleseedIInteractiveRender::IsRendering()
 
 void AppleseedIInteractiveRender::AbortRender()
 {
+    MSG msg;
+    while (PeekMessage(&msg, GetCOREInterface()->GetMAXHWnd(), 0, 0, PM_REMOVE)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
+    m_render_session->abort_render();
     EndSession();
 }

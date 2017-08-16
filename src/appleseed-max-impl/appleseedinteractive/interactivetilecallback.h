@@ -42,6 +42,7 @@
 // Standard headers.
 #include <cstddef>
 #include <memory>
+#include <future>
 
 // Forward declarations.
 namespace renderer  { class Frame; }
@@ -54,17 +55,16 @@ class InteractiveTileCallback
   public:
       InteractiveTileCallback(
         Bitmap*                         bitmap,
-        IIRenderMgr*                    iimanager,
-        volatile foundation::uint32*    rendered_tile_count);
+        IIRenderMgr*                    iimanager);
 
-    virtual void post_render(
-        const renderer::Frame*  frame) override;
+    virtual void post_render(const renderer::Frame* frame) override;
 
-    void update_window();
-    void PostCallback(void(*funcPtr)(UINT_PTR), UINT_PTR param);
+    void        update_window();
+    void        PostCallback(void(*funcPtr)(UINT_PTR), UINT_PTR param);
+    static void update_caller(UINT_PTR param_ptr);
 
-    static VOID CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
-    IIRenderMgr*                        m_iimanager;
+    IIRenderMgr*        m_iimanager;
+    std::promise<void>  m_ui_promise;
 
   private:
     Bitmap*                             m_bitmap;

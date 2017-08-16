@@ -46,6 +46,7 @@
 
 // Standard headers.
 #include <algorithm>
+#include <future>
 
 namespace asf = foundation;
 namespace asr = renderer;
@@ -54,36 +55,39 @@ namespace asr = renderer;
 
 InteractiveTileCallback::InteractiveTileCallback(
     Bitmap*                         bitmap,
-    IIRenderMgr*                    iimanager,
-    volatile foundation::uint32*    rendered_tile_count
+    IIRenderMgr*                    iimanager
     )
-    : TileCallback(bitmap, rendered_tile_count)
+    : TileCallback(bitmap, 0)
     , m_bitmap(bitmap)
     , m_iimanager(iimanager)
 {
 }
 
-VOID CALLBACK InteractiveTileCallback::TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
+void InteractiveTileCallback::update_window()
 {
-    DebugPrint(_T("idEvent: %d\n"), idEvent);
-    KillTimer(GetCOREInterface()->GetMAXHWnd(), idEvent);
-    //if (m_iimanager->IsRendering())
-    //    m_iimanager->UpdateDisplay();
+    if (m_iimanager->IsRendering())
+        m_iimanager->UpdateDisplay();
+
+    m_ui_promise.set_value();
+}
+
+void InteractiveTileCallback::update_caller(UINT_PTR param_ptr)
+{
+    InteractiveTileCallback* object_ptr = reinterpret_cast<InteractiveTileCallback*>(param_ptr);
+    object_ptr->update_window();
 }
 
 void InteractiveTileCallback::post_render(
     const asr::Frame* frame)
 {
+    m_ui_promise = std::promise<void>();
     TileCallback::post_render(frame);
 
-    int IDT_TIMER1 = 1001;
-    SetTimer(GetCOREInterface()->GetMAXHWnd(), IDT_TIMER1, 0, TimerProc);
-    InteractiveSession* session_object = static_cast<InteractiveSession*>(ptr);
-
-    PostCallback((UINT_PTR)InteractiveTileCallback::update_window, (UINT_PTR)this);
-    //wait here until timer proc gets called
-
-
+    std::future<int> ui_future = m_ui_promise.get_future();
+    PostCallback(update_caller, (UINT_PTR)this);
+    
+    //wait until ui proc gets handled to ensure class object is valid
+    ui_future.wait();
 }
 
 void InteractiveTileCallback::PostCallback(void(*funcPtr)(UINT_PTR), UINT_PTR param)
@@ -91,6 +95,3 @@ void InteractiveTileCallback::PostCallback(void(*funcPtr)(UINT_PTR), UINT_PTR pa
   PostMessage(GetCOREInterface()->GetMAXHWnd(), WM_TRIGGER_CALLBACK, (UINT_PTR)funcPtr, (UINT_PTR)param);
 }
 
-void InteractiveTileCallback::update_window()
-{
-}

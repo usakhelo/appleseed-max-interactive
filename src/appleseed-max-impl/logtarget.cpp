@@ -43,8 +43,39 @@
 // Standard headers.
 #include <vector>
 #include <string>
+#include <future>
 
 namespace asf = foundation;
+
+#define WM_TRIGGER_CALLBACK WM_USER+4764
+
+namespace
+{
+  std::vector<std::string> g_lines;
+  DWORD g_type;
+
+  void ui_log_writer(UINT_PTR param_ptr)
+  {
+    std::promise<void>* promise_ptr = reinterpret_cast<std::promise<void>*>(param_ptr);
+
+    for (auto line : g_lines)
+    {
+      GetCOREInterface()->Log()->LogEntry(
+        g_type,
+        FALSE,
+        _T("appleseed"),
+        _T("[appleseed] %s"),
+        utf8_to_wide(line).c_str());
+    }
+
+    promise_ptr->set_value();
+  }
+
+  void PostCallback(void(*funcPtr)(UINT_PTR), UINT_PTR param)
+  {
+    PostMessage(GetCOREInterface()->GetMAXHWnd(), WM_TRIGGER_CALLBACK, (UINT_PTR)funcPtr, (UINT_PTR)param);
+  }
+}
 
 void LogTarget::release()
 {
@@ -71,16 +102,34 @@ void LogTarget::write(
         break;
     }
 
-    std::vector<std::string> lines;
-    asf::split(message, "\n", lines);
 
-    for (auto line : lines)
+    auto temp1 = IsGUIThread(false);
+    auto is_ui_thread = GetCOREInterface15()->GetMainThreadID() == GetCurrentThreadId();
+
+    if (is_ui_thread)
     {
-        GetCOREInterface()->Log()->LogEntry(
-            type,
-            FALSE,
-            _T("appleseed"),
-            _T("[appleseed] %s"),
-            utf8_to_wide(line).c_str());
+        std::vector<std::string> lines;
+        asf::split(message, "\n", lines);
+        for (auto line : lines)
+        {
+            GetCOREInterface()->Log()->LogEntry(
+              type,
+              FALSE,
+              _T("appleseed"),
+              _T("[appleseed] %s"),
+              utf8_to_wide(line).c_str());
+        }
+    }
+    else
+    {
+        g_lines.clear();
+        asf::split(message, "\n", g_lines);
+        g_type = type;
+
+        std::promise<void> ui_promise = std::promise<void>();
+        std::future<int> ui_future = ui_promise.get_future();
+
+        PostCallback(ui_log_writer, (UINT_PTR)&ui_promise);
+        ui_future.wait();
     }
 }

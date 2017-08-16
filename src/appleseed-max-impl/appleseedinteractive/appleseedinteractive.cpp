@@ -185,9 +185,7 @@ AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& rend
     , m_view_inode(nullptr)
     , m_view_exp(nullptr)
     , m_progress_cb(nullptr)
-    , m_interactiveRenderLoopThread(nullptr)
     , m_render_session(nullptr)
-    , m_stop_event(nullptr)
 {
 }
 
@@ -278,15 +276,10 @@ void AppleseedIInteractiveRender::BeginSession()
 
         m_render_session->start_render();
 
-        // Create the thread for the render session
-        //m_interactiveRenderLoopThread = CreateThread(NULL, 0, m_render_session->render_thread_runner, m_render_session, 0, nullptr);
-
         //ToDo
         // Render the frame.
         //Somehow get messages when objects change in scene
         //Let renderer know to restart the render
-        
-        //DbgAssert(m_interactiveRenderLoopThread != nullptr);
     }
 }
 
@@ -304,9 +297,6 @@ void AppleseedIInteractiveRender::EndSession()
 
     if (m_progress_cb)
         m_progress_cb->SetTitle(_T("Done."));
-
-    // Run maxscript garbage collection to get rid of any leftover "leaks" from AMG.
-    //DbgVerify(ExecuteMAXScriptScript(_T("gc light:true"), true));
 
     //DbgAssert(m_interactiveRenderLoopThread == nullptr);
 }
@@ -452,6 +442,7 @@ void AppleseedIInteractiveRender::AbortRender()
 
     m_render_session->abort_render();
 
+    //drain ui message queue to process bitmap updates posted from tilecallback
     MSG msg;
     while (PeekMessage(&msg, GetCOREInterface()->GetMAXHWnd(), 0, 0, PM_REMOVE)) {
         TranslateMessage(&msg);

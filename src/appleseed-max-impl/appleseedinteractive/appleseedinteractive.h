@@ -65,9 +65,6 @@ public:
 
     asf::auto_release_ptr<asr::Project> prepare_project(const RendererSettings& render_settings);
 
-    HANDLE                      m_interactiveRenderLoopThread;
-    HANDLE                      m_stop_event;
-
 private:
     InteractiveSession*         m_render_session;
     Bitmap*                     m_bitmap;

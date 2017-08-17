@@ -58,7 +58,7 @@ asr::IRendererController::Status InteractiveRendererController::get_status() con
     return m_status;
 }
 
-void InteractiveRendererController::abort_rendering()
+void InteractiveRendererController::set_status(const Status status)
 {
-    m_status = AbortRendering;
+    m_status = status;
 }

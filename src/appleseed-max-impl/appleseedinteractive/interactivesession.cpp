@@ -68,7 +68,12 @@ void InteractiveSession::start_render()
 
 void InteractiveSession::abort_render()
 {
-    m_render_ctrl->abort_rendering();
+    m_render_ctrl->set_status(asr::IRendererController::AbortRendering);
+}
+
+void InteractiveSession::reininitialize_render()
+{
+  m_render_ctrl->set_status(asr::IRendererController::ReinitializeRendering);
 }
 
 void InteractiveSession::end_render()

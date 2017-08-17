@@ -37,6 +37,7 @@ class InteractiveSession
     void render_thread();
     void start_render();
     void abort_render();
+    void reininitialize_render();
     void end_render();
 
     std::unique_ptr<InteractiveRendererController>  m_render_ctrl;

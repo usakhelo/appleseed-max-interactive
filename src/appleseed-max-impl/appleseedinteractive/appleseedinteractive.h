@@ -10,6 +10,7 @@
 // 3ds Max headers.
 #include "Rendering/IAbortableRenderer.h"
 #include "interactiverender.h"
+#include "ISceneEventManager.h"
 
 // Standard headers.
 #include <vector>
@@ -21,6 +22,20 @@ class InteractiveSession;
 
 namespace asf = foundation;
 namespace asr = renderer;
+
+class SceneChangeCallback
+    : public INodeEventCallback
+{
+  virtual void ControllerStructured(NodeKeyTab& nodes) override
+  {
+      DebugPrint(_T("ControllerStructured called on this amound of objects: %d\n"), nodes.Count());
+  }
+
+  virtual void ControllerOtherEvent(NodeKeyTab& nodes) override
+  {
+      DebugPrint(_T("ControllerOtherEvent called on this amound of objects: %d\n"), nodes.Count());
+  }
+};
 
 class AppleseedIInteractiveRender
     : public IInteractiveRender
@@ -80,4 +95,8 @@ private:
     ViewExp*                    m_view_exp;
     INode*                      m_view_inode;
     bool                        m_use_view_inode;
+
+    INodeEventCallback          m_node_callback;
+    SceneEventNamespace::CallbackKey  m_callback_key;
+
 };

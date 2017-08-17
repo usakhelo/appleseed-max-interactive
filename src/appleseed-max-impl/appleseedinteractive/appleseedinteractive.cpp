@@ -186,6 +186,8 @@ AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& rend
     , m_view_exp(nullptr)
     , m_progress_cb(nullptr)
     , m_render_session(nullptr)
+    , m_node_callback(SceneChangeCallback())
+    , m_callback_key(0)
 {
 }
 
@@ -274,6 +276,8 @@ void AppleseedIInteractiveRender::BeginSession()
 
         m_currently_rendering = true;
 
+        m_callback_key = GetISceneEventManager()->RegisterCallback(&m_node_callback);
+
         m_render_session->start_render();
 
         //ToDo
@@ -306,6 +310,8 @@ void AppleseedIInteractiveRender::EndSession()
 
     if (m_progress_cb)
         m_progress_cb->SetTitle(_T("Done."));
+
+    GetISceneEventManager()->UnRegisterCallback(m_callback_key);
 
     //DbgAssert(m_interactiveRenderLoopThread == nullptr);
 }

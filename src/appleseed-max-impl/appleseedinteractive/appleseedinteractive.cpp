@@ -289,6 +289,15 @@ void AppleseedIInteractiveRender::EndSession()
 
     if (m_render_session != nullptr)
     {
+        m_render_session->abort_render();
+
+        //drain ui message queue to process bitmap updates posted from tilecallback
+        MSG msg;
+        while (PeekMessage(&msg, GetCOREInterface()->GetMAXHWnd(), 0, 0, PM_REMOVE)) {
+          TranslateMessage(&msg);
+          DispatchMessage(&msg);
+        }
+
         m_render_session->end_render();
 
         delete m_render_session;
@@ -439,15 +448,5 @@ BOOL AppleseedIInteractiveRender::IsRendering()
 
 void AppleseedIInteractiveRender::AbortRender()
 {
-
-    m_render_session->abort_render();
-
-    //drain ui message queue to process bitmap updates posted from tilecallback
-    MSG msg;
-    while (PeekMessage(&msg, GetCOREInterface()->GetMAXHWnd(), 0, 0, PM_REMOVE)) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
-
     EndSession();
 }

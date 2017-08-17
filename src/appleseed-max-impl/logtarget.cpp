@@ -73,11 +73,6 @@ namespace
 
     delete data_ptr;
   }
-
-  void PostCallback(void(*funcPtr)(UINT_PTR), UINT_PTR param)
-  {
-    PostMessage(GetCOREInterface()->GetMAXHWnd(), WM_TRIGGER_CALLBACK, (UINT_PTR)funcPtr, (UINT_PTR)param);
-  }
 }
 
 void LogTarget::release()
@@ -105,8 +100,7 @@ void LogTarget::write(
         break;
     }
 
-
-    auto is_ui_thread = IsGUIThread(false);
+    auto is_ui_thread = GetCOREInterface15()->GetMainThreadID() == GetCurrentThreadId();
 
     if (is_ui_thread)
     {
@@ -129,6 +123,6 @@ void LogTarget::write(
         asf::split(message, "\n", data->lines);
         data->type = type;
 
-        PostCallback(ui_log_writer, (UINT_PTR)data);
+        PostMessage(GetCOREInterface()->GetMAXHWnd(), WM_TRIGGER_CALLBACK, (UINT_PTR)ui_log_writer, (UINT_PTR)data);
     }
 }

@@ -169,6 +169,25 @@ namespace
     }
 }
 
+class SceneChangeCallback
+  : public INodeEventCallback
+{
+public:
+  SceneChangeCallback(InteractiveSession*& render_session)
+    : m_render_session(render_session)
+  {
+  }
+
+private:
+  virtual void ControllerOtherEvent(NodeKeyTab& nodes) override
+  {
+    if (m_render_session != nullptr)
+      m_render_session->reininitialize_render();
+    DebugPrint(_T("ControllerOtherEvent called on this amound of objects: %d\n"), nodes.Count());
+  }
+  InteractiveSession*         m_render_session;
+};
+
 //
 // IInteractiveRender
 //
@@ -185,8 +204,8 @@ AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& rend
     , m_view_inode(nullptr)
     , m_view_exp(nullptr)
     , m_progress_cb(nullptr)
-    , m_render_session(nullptr)
-    , m_node_callback(SceneChangeCallback())
+    , m_render_session()
+    , m_node_callback(nullptr)
     , m_callback_key(0)
 {
 }
@@ -276,14 +295,10 @@ void AppleseedIInteractiveRender::BeginSession()
 
         m_currently_rendering = true;
 
-        m_callback_key = GetISceneEventManager()->RegisterCallback(&m_node_callback);
-
         m_render_session->start_render();
 
-        //ToDo
-        // Render the frame.
-        //Somehow get messages when objects change in scene
-        //Let renderer know to restart the render
+        m_node_callback = new SceneChangeCallback(m_render_session);
+        m_callback_key = GetISceneEventManager()->RegisterCallback(m_node_callback, false, 100, true);
     }
 }
 
@@ -293,6 +308,10 @@ void AppleseedIInteractiveRender::EndSession()
 
     if (m_render_session != nullptr)
     {
+        GetISceneEventManager()->UnRegisterCallback(m_callback_key);
+        delete m_node_callback;
+        m_node_callback = nullptr;
+
         m_render_session->abort_render();
 
         //drain ui message queue to process bitmap updates posted from tilecallback
@@ -311,7 +330,6 @@ void AppleseedIInteractiveRender::EndSession()
     if (m_progress_cb)
         m_progress_cb->SetTitle(_T("Done."));
 
-    GetISceneEventManager()->UnRegisterCallback(m_callback_key);
 
     //DbgAssert(m_interactiveRenderLoopThread == nullptr);
 }

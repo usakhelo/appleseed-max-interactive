@@ -19,23 +19,10 @@
 namespace renderer { class Project; }
 class AppleseedRenderer;
 class InteractiveSession;
+class SceneChangeCallback;
 
 namespace asf = foundation;
 namespace asr = renderer;
-
-class SceneChangeCallback
-    : public INodeEventCallback
-{
-  virtual void ControllerStructured(NodeKeyTab& nodes) override
-  {
-      DebugPrint(_T("ControllerStructured called on this amound of objects: %d\n"), nodes.Count());
-  }
-
-  virtual void ControllerOtherEvent(NodeKeyTab& nodes) override
-  {
-      DebugPrint(_T("ControllerOtherEvent called on this amound of objects: %d\n"), nodes.Count());
-  }
-};
 
 class AppleseedIInteractiveRender
     : public IInteractiveRender
@@ -96,7 +83,7 @@ private:
     INode*                      m_view_inode;
     bool                        m_use_view_inode;
 
-    INodeEventCallback          m_node_callback;
+    INodeEventCallback*         m_node_callback;
     SceneEventNamespace::CallbackKey  m_callback_key;
 
 };

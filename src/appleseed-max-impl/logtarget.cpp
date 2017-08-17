@@ -51,24 +51,27 @@ namespace asf = foundation;
 
 namespace
 {
-  std::vector<std::string> g_lines;
-  DWORD g_type;
+  struct message_data
+  {
+      std::vector<std::string> lines;
+      DWORD type;
+  };
 
   void ui_log_writer(UINT_PTR param_ptr)
   {
-    std::promise<void>* promise_ptr = reinterpret_cast<std::promise<void>*>(param_ptr);
+     message_data* data_ptr = reinterpret_cast<message_data*>(param_ptr);
 
-    for (auto line : g_lines)
+    for (auto line : data_ptr->lines)
     {
       GetCOREInterface()->Log()->LogEntry(
-        g_type,
+        data_ptr->type,
         FALSE,
         _T("appleseed"),
         _T("[appleseed] %s"),
         utf8_to_wide(line).c_str());
     }
 
-    promise_ptr->set_value();
+    delete data_ptr;
   }
 
   void PostCallback(void(*funcPtr)(UINT_PTR), UINT_PTR param)
@@ -103,8 +106,7 @@ void LogTarget::write(
     }
 
 
-    auto temp1 = IsGUIThread(false);
-    auto is_ui_thread = GetCOREInterface15()->GetMainThreadID() == GetCurrentThreadId();
+    auto is_ui_thread = IsGUIThread(false);
 
     if (is_ui_thread)
     {
@@ -122,14 +124,11 @@ void LogTarget::write(
     }
     else
     {
-        g_lines.clear();
-        asf::split(message, "\n", g_lines);
-        g_type = type;
+        message_data* data = new message_data();
+        data->lines.clear();
+        asf::split(message, "\n", data->lines);
+        data->type = type;
 
-        std::promise<void> ui_promise = std::promise<void>();
-        std::future<int> ui_future = ui_promise.get_future();
-
-        PostCallback(ui_log_writer, (UINT_PTR)&ui_promise);
-        ui_future.wait();
+        PostCallback(ui_log_writer, (UINT_PTR)data);
     }
 }

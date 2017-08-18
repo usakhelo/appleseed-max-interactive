@@ -184,6 +184,19 @@ private:
     if (m_render_session != nullptr)
       m_render_session->reininitialize_render();
     DebugPrint(_T("ControllerOtherEvent called on this amound of objects: %d\n"), nodes.Count());
+    //update the camera
+    //ViewParams m_view_params;
+    //if (GetUseViewINode())
+    //    get_view_params_from_view_node(m_view_params, GetViewINode(), time);
+    //else
+    //    get_view_params_from_viewport(m_view_params, GetViewExp(), time);
+    /*build_camera(
+        INode*                  view_node,
+        const ViewParams&       view_params,
+        Bitmap*                 bitmap,
+        const RendererSettings& settings,
+        const TimeValue         time)*/
+    //renderer::update_camera(new_camera);
   }
   InteractiveSession*         m_render_session;
 };

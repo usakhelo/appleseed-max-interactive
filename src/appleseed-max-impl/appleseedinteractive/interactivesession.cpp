@@ -25,15 +25,14 @@
 
 InteractiveSession::InteractiveSession(
     IIRenderMgr*                            iirender_mgr,
-    asf::auto_release_ptr<asr::Project>     project,
+    asr::Project*                           project,
     const RendererSettings&                 settings,
-    Bitmap*                                 bitmap,
-    IRenderProgressCallback*                progress_cb)
+    Bitmap*                                 bitmap
+)
     : m_project(project)
     , m_iirender_mgr(iirender_mgr)
     , m_renderer_settings(settings)
     , m_bitmap(bitmap)
-    , m_progress_cb(progress_cb)
     , m_render_ctrl(nullptr)
 {
 }
@@ -44,7 +43,7 @@ void InteractiveSession::render_thread()
     if (m_render_ctrl != nullptr)
         m_render_ctrl.reset(nullptr);
 
-    m_render_ctrl = std::unique_ptr<InteractiveRendererController>(new InteractiveRendererController(m_iirender_mgr, m_progress_cb));
+    m_render_ctrl = std::unique_ptr<InteractiveRendererController>(new InteractiveRendererController());
 
     // Create the tile callback.
     InteractiveTileCallback m_tile_callback(m_bitmap, m_iirender_mgr, m_render_ctrl.get());
@@ -52,8 +51,8 @@ void InteractiveSession::render_thread()
     // Create the master renderer.
     std::auto_ptr<asr::MasterRenderer> renderer(
         new asr::MasterRenderer(
-            m_project.ref(),
-            m_project.ref().configurations().get_by_name("interactive")->get_inherited_parameters(),
+            *m_project,
+            (*m_project).configurations().get_by_name("interactive")->get_inherited_parameters(),
             m_render_ctrl.get(),
             &m_tile_callback));
 

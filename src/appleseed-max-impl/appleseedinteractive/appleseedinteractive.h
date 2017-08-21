@@ -65,8 +65,17 @@ public:
     // IAbortable
     virtual void AbortRender() override;
 
-    asf::auto_release_ptr<asr::Project> prepare_project(const RendererSettings& render_settings);
+    asf::auto_release_ptr<asr::Project> prepare_project(
+        const RendererSettings&     renderer_settings,
+        const ViewParams&           view_params,
+        const TimeValue             time
+    );
 
+    void update_camera();
+    static void viewport_change_callback(void* param, NotifyInfo* pInfo);
+
+    asf::auto_release_ptr<asr::Project> m_project;
+    int                                 m_view_index;
 private:
     InteractiveSession*         m_render_session;
     Bitmap*                     m_bitmap;

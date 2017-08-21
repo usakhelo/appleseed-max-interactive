@@ -39,12 +39,8 @@
 namespace asf = foundation;
 namespace asr = renderer;
 
-InteractiveRendererController::InteractiveRendererController(
-    IIRenderMgr*            renderer,
-    RendProgressCallback*   progress_cb)
-  : m_renderer(renderer)
-  , m_progress_cb(progress_cb)
-  , m_status(ContinueRendering)
+InteractiveRendererController::InteractiveRendererController()
+  : m_status(ContinueRendering)
 {
 }
 

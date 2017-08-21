@@ -45,9 +45,7 @@ class InteractiveRendererController
   : public renderer::DefaultRendererController
 {
   public:
-    InteractiveRendererController(
-        IIRenderMgr*                    renderer,
-        RendProgressCallback*           progress_cb);
+    InteractiveRendererController();
 
     virtual void on_rendering_begin() override;
 
@@ -55,7 +53,5 @@ class InteractiveRendererController
     void set_status(const Status status);
 
   private:
-    IIRenderMgr*                        m_renderer;
-    RendProgressCallback*               m_progress_cb;
     Status                              m_status;
 };

@@ -143,33 +143,6 @@ namespace
     }
 }
 
-class SceneChangeCallback
-  : public INodeEventCallback
-{
-public:
-  SceneChangeCallback(
-      InteractiveSession* render_session,
-      AppleseedIInteractiveRender* renderer)
-    : m_render_session(render_session)
-    , m_renderer(renderer)
-  {
-  }
-
-private:
-  virtual void ControllerOtherEvent(NodeKeyTab& nodes) override
-  {
-    if (m_renderer != nullptr)
-        m_renderer->update_camera();
-
-    if (m_render_session != nullptr)
-      m_render_session->reininitialize_render();
-
-    DebugPrint(_T("ControllerOtherEvent called on this amound of objects: %d\n"), nodes.Count());
-  }
-  InteractiveSession*           m_render_session;
-  AppleseedIInteractiveRender*  m_renderer;
-};
-
 //
 // IInteractiveRender
 //
@@ -178,7 +151,6 @@ AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& rend
     : m_renderer_plugin(renderer)
     , m_owner_wnd(0)
     , m_currently_rendering(false)
-    , m_current_progress(0)
     , m_bitmap(nullptr)
     , m_iirender_mgr(nullptr)
     , m_scene_inode(nullptr)
@@ -186,10 +158,8 @@ AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& rend
     , m_view_inode(nullptr)
     , m_view_exp(nullptr)
     , m_progress_cb(nullptr)
-    , m_render_session()
-    , m_node_callback(nullptr)
-    , m_callback_key(0)
 {
+    m_entities.clear();
 }
 
 AppleseedIInteractiveRender::~AppleseedIInteractiveRender(void)
@@ -220,7 +190,6 @@ asf::auto_release_ptr<asr::Project> AppleseedIInteractiveRender::prepare_project
     if (m_progress_cb)
         m_progress_cb->SetTitle(_T("Collecting Entities..."));
 
-    MaxSceneEntities m_entities;
     m_entities.clear();
 
     MaxSceneEntityCollector collector(m_entities);
@@ -255,13 +224,12 @@ void AppleseedIInteractiveRender::update_camera()
     TimeValue time = GetCOREInterface()->GetTime();
 
     ViewParams view_params;
-    //get params from active viewport
-    ViewExp& view_exp = GetCOREInterface7()->getViewExp(m_view_index); //todo: should check the case of non-viewport views, e.g. trackview
+    ViewExp& view_exp = GetCOREInterface7()->getViewExp(m_vpt_index); //todo: should check the case of non-viewport views, e.g. trackview
     get_view_params_from_viewport(view_params, view_exp, time);
 
     RendererSettings renderer_settings = RendererSettings::defaults();
 
-    m_project->get_scene()->cameras().get_by_index(0)->transform_sequence().set_transform(0.0,
+    m_project->get_scene()->get_active_camera()->transform_sequence().set_transform((float)time,
         asf::Transformd::from_local_to_parent(to_matrix4d(Inverse(view_params.affineTM))));
 }
 
@@ -269,15 +237,10 @@ void AppleseedIInteractiveRender::viewport_change_callback(void* param, NotifyIn
 {
     AppleseedIInteractiveRender* renderer_ptr = reinterpret_cast<AppleseedIInteractiveRender*>(param);
 
-    DebugPrint(_T("ctrl_status: %d\n"), renderer_ptr->m_render_session->m_render_ctrl->get_status());
+    renderer_ptr->update_camera();
 
-    if (renderer_ptr->m_render_session->m_render_ctrl->get_status() != asr::IRendererController::ReinitializeRendering)
-    {
-        renderer_ptr->update_camera();
-
-        if (renderer_ptr->m_render_session != nullptr)
-            renderer_ptr->m_render_session->reininitialize_render();
-    }
+    if (renderer_ptr->m_render_session != nullptr)
+        renderer_ptr->m_render_session->reininitialize_render();
 }
 
 //
@@ -291,27 +254,28 @@ void AppleseedIInteractiveRender::BeginSession()
         // Retrieve and tweak renderer settings.
         RendererSettings renderer_settings = RendererSettings::defaults();
 
-        TimeValue time = GetCOREInterface()->GetTime();
+        m_time = GetCOREInterface()->GetTime();
 
-        m_view_index = GetCOREInterface7()->getActiveViewportIndex();
-        ViewExp& view_exp = GetCOREInterface7()->getViewExp(m_view_index); //todo: should check the case of non-viewport views, e.g. trackview
+        m_vpt_index = GetCOREInterface7()->getActiveViewportIndex();
+        ViewExp& view_exp = GetCOREInterface7()->getViewExp(m_vpt_index); //todo: should check the case of non-viewport views, e.g. trackview
         ViewParams view_params;
-        get_view_params_from_viewport(view_params, view_exp, time);
+        get_view_params_from_viewport(view_params, view_exp, m_time);
 
-        m_project = prepare_project(renderer_settings, view_params, time);
+        m_project = prepare_project(renderer_settings, view_params, m_time);
 
-        m_render_session = new InteractiveSession(
+        m_render_session.reset(new InteractiveSession(
             m_iirender_mgr, 
             m_project.get(),
             renderer_settings,
             m_bitmap
-            );
+            ));
 
         if (m_progress_cb)
             m_progress_cb->SetTitle(_T("Rendering..."));
 
         m_currently_rendering = true;
 
+        UnRegisterNotification(viewport_change_callback, this, NOTIFY_VIEWPORT_CHANGE);
         RegisterNotification(viewport_change_callback, this, NOTIFY_VIEWPORT_CHANGE);
         //RegisterNotification(viewport_change_callback, this, NOTIFY_ACTIVE_VIEWPORT_CHANGED);
 
@@ -338,14 +302,11 @@ void AppleseedIInteractiveRender::EndSession()
 
         m_render_session->end_render();
 
-        delete m_render_session;
-        m_render_session = nullptr;
+        m_render_session.reset(nullptr);
 
-        //todo: Call RenderEnd() on all object instances.
-        //render_end(m_entities.m_objects, m_time);
-
-        //clear();
     }
+    
+    render_end(m_entities.m_objects, m_time);
 
     if (m_progress_cb)
         m_progress_cb->SetTitle(_T("Done."));

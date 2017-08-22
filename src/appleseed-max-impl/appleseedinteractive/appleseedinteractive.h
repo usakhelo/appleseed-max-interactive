@@ -2,6 +2,7 @@
 #pragma once
 
 // appleseed-max headers.
+#include "appleseedrenderer/maxsceneentities.h"
 #include "appleseedrenderer/renderersettings.h"
 
 // appleseed.foundation headers.
@@ -10,16 +11,14 @@
 // 3ds Max headers.
 #include "Rendering/IAbortableRenderer.h"
 #include "interactiverender.h"
-#include "ISceneEventManager.h"
 
 // Standard headers.
-#include <vector>
+#include <memory>
 
 // Forward declarations.
 namespace renderer { class Project; }
 class AppleseedRenderer;
 class InteractiveSession;
-class SceneChangeCallback;
 
 namespace asf = foundation;
 namespace asr = renderer;
@@ -74,25 +73,22 @@ public:
     void update_camera();
     static void viewport_change_callback(void* param, NotifyInfo* pInfo);
 
-    asf::auto_release_ptr<asr::Project> m_project;
-    int                                 m_view_index;
+    asf::auto_release_ptr<asr::Project>         m_project;
+    int                                         m_vpt_index;
 private:
-    InteractiveSession*         m_render_session;
+    std::unique_ptr<InteractiveSession> m_render_session;
     Bitmap*                     m_bitmap;
-    int                         m_current_progress;
     bool                        m_currently_rendering;
     std::vector<DefaultLight>   m_default_lights;
     IIRenderMgr*                m_iirender_mgr;
     HWND                        m_owner_wnd;
     IRenderProgressCallback*    m_progress_cb;
+    MaxSceneEntities            m_entities;
+    TimeValue                   m_time;
     Box2                        m_region;
     AppleseedRenderer&          m_renderer_plugin;
     INode*                      m_scene_inode;
     ViewExp*                    m_view_exp;
     INode*                      m_view_inode;
     bool                        m_use_view_inode;
-
-    INodeEventCallback*         m_node_callback;
-    SceneEventNamespace::CallbackKey  m_callback_key;
-
 };

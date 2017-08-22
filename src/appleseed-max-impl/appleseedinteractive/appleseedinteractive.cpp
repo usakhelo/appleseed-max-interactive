@@ -36,10 +36,6 @@ namespace asr = renderer;
 
 namespace
 {
-    void post_callback(void(*funcPtr)(UINT_PTR), UINT_PTR param)
-    {
-    }
-
     void get_view_params_from_viewport(
         ViewParams&             view_params,
         ViewExp&                view_exp,
@@ -175,6 +171,41 @@ namespace
 
         proc.EndEnumeration();
     }
+
+    class SceneChangeCallback
+        : public INodeEventCallback
+    {
+    public:
+        SceneChangeCallback(AppleseedIInteractiveRender* renderer, INode* camera)
+            : m_renderer(renderer)
+            , m_active_camera(camera)
+        {
+        }
+
+        virtual void ControllerOtherEvent(NodeKeyTab& nodes) override
+        {
+            if (m_active_camera != nullptr)
+            {
+                for (int i = 0; i < nodes.Count(); i++)
+                {
+                    if (NodeEventNamespace::GetNodeByKey(nodes[i]) == m_active_camera)
+                    {
+                        if (m_renderer != nullptr)
+                        {
+                            m_renderer->update_camera(m_active_camera);
+                            m_renderer->m_render_session->reininitialize_render();
+                        }
+                    }
+                }
+                
+            }
+            DebugPrint(_T("ControllerOtherEvent called on this amound of objects: %d\n"), nodes.Count());
+        }
+
+    private:
+        AppleseedIInteractiveRender*         m_renderer;
+        INode*  m_active_camera;
+    };
 }
 
 //
@@ -192,7 +223,6 @@ AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& rend
     , m_view_inode(nullptr)
     , m_view_exp(nullptr)
     , m_progress_cb(nullptr)
-    , m_callback_set(false)
 {
     m_entities.clear();
 }
@@ -254,46 +284,15 @@ asf::auto_release_ptr<asr::Project> AppleseedIInteractiveRender::prepare_project
     return project;
 }
 
-void AppleseedIInteractiveRender::update_camera()
+void AppleseedIInteractiveRender::update_camera(INode* camera)
 {
-    TimeValue time = GetCOREInterface()->GetTime();
-
     ViewParams view_params;
-    ViewExp& view_exp = GetCOREInterface7()->getViewExp(m_vpt_index); //todo: should check the case of non-viewport views, e.g. trackview
-    get_view_params_from_viewport(view_params, view_exp, time);
+    get_view_params_from_view_node(view_params, camera, m_time);
 
     RendererSettings renderer_settings = RendererSettings::defaults();
 
-    m_project->get_scene()->get_active_camera()->transform_sequence().set_transform((float)time,
+    m_project->get_scene()->get_active_camera()->transform_sequence().set_transform((float)m_time,
         asf::Transformd::from_local_to_parent(to_matrix4d(Inverse(view_params.affineTM))));
-
-    m_callback_set = false;
-}
-
-void AppleseedIInteractiveRender::viewport_change_callback(void* param, NotifyInfo* pInfo)
-{
-    AppleseedIInteractiveRender* renderer_ptr = reinterpret_cast<AppleseedIInteractiveRender*>(param);
-    if (!renderer_ptr->m_callback_set)
-    {
-        PostMessage(GetCOREInterface()->GetMAXHWnd(), WM_TRIGGER_CALLBACK, (UINT_PTR)renderer_ptr->update_caller, (UINT_PTR)renderer_ptr);
-    }
-    renderer_ptr->m_callback_set = true;
-}
-
-void AppleseedIInteractiveRender::update_caller(UINT_PTR param_ptr)
-{
-    try
-    {
-        AppleseedIInteractiveRender* renderer_ptr = reinterpret_cast<AppleseedIInteractiveRender*>(param_ptr);
-
-        renderer_ptr->update_camera();
-
-        if (renderer_ptr->m_render_session != nullptr)
-            renderer_ptr->m_render_session->reininitialize_render();
-    }
-    catch (const std::exception&)
-    {
-    }
 }
 
 //
@@ -304,16 +303,15 @@ void AppleseedIInteractiveRender::BeginSession()
 {
     if (m_render_session == nullptr)
     {
-        // Retrieve and tweak renderer settings.
         RendererSettings renderer_settings = RendererSettings::defaults();
 
         m_time = GetCOREInterface()->GetTime();
 
-        m_vpt_index = GetCOREInterface7()->getActiveViewportIndex();
+        INode* active_cam = GetUseViewINode() ? GetViewINode() : nullptr;
 
         ViewParams view_params;
-        if (GetUseViewINode())
-            get_view_params_from_view_node(view_params, GetViewINode(), m_time);
+        if (active_cam)
+            get_view_params_from_view_node(view_params, active_cam, m_time);
         else
             get_view_params_from_viewport(view_params, *GetViewExp(), m_time);
 
@@ -330,8 +328,8 @@ void AppleseedIInteractiveRender::BeginSession()
             m_progress_cb->SetTitle(_T("Rendering..."));
 
         m_currently_rendering = true;
-
-        RegisterNotification(viewport_change_callback, this, NOTIFY_VIEWPORT_CHANGE);
+        m_node_callback.reset(new SceneChangeCallback(this, active_cam));
+        m_callback_key = GetISceneEventManager()->RegisterCallback(m_node_callback.get(), false, 100, true);
 
         m_render_session->start_render();
     }
@@ -343,13 +341,15 @@ void AppleseedIInteractiveRender::EndSession()
 
     if (m_render_session != nullptr)
     {
-        UnRegisterNotification(viewport_change_callback, this, NOTIFY_VIEWPORT_CHANGE);
+        GetISceneEventManager()->UnRegisterCallback(m_callback_key);
+        m_node_callback.reset(nullptr);
 
         m_render_session->abort_render();
 
         //drain ui message queue to process bitmap updates posted from tilecallback
         MSG msg;
-        while (PeekMessage(&msg, GetCOREInterface()->GetMAXHWnd(), 0, 0, PM_REMOVE)) {
+        while (PeekMessage(&msg, GetCOREInterface()->GetMAXHWnd(), 0, 0, PM_REMOVE))
+        {
           TranslateMessage(&msg);
           DispatchMessage(&msg);
         }
@@ -364,9 +364,6 @@ void AppleseedIInteractiveRender::EndSession()
 
     if (m_progress_cb)
         m_progress_cb->SetTitle(_T("Done."));
-
-
-    //DbgAssert(m_interactiveRenderLoopThread == nullptr);
 }
 
 void AppleseedIInteractiveRender::SetOwnerWnd(HWND hOwnerWnd)

@@ -11,6 +11,7 @@
 // 3ds Max headers.
 #include "Rendering/IAbortableRenderer.h"
 #include "interactiverender.h"
+#include "ISceneEventManager.h"
 
 // Standard headers.
 #include <memory>
@@ -70,15 +71,14 @@ public:
         const TimeValue             time
     );
 
-    void update_camera();
-    static void viewport_change_callback(void* param, NotifyInfo* pInfo);
-    static void update_caller(UINT_PTR param_ptr);
+    void update_camera(INode* camera);
 
     asf::auto_release_ptr<asr::Project>         m_project;
-    int                                         m_vpt_index;
-    bool                        m_callback_set;
-private:
+
+    std::unique_ptr<INodeEventCallback> m_node_callback;
+    SceneEventNamespace::CallbackKey    m_callback_key;
     std::unique_ptr<InteractiveSession> m_render_session;
+private:
     Bitmap*                     m_bitmap;
     bool                        m_currently_rendering;
     std::vector<DefaultLight>   m_default_lights;

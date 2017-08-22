@@ -32,8 +32,14 @@
 namespace asf = foundation;
 namespace asr = renderer;
 
+#define WM_TRIGGER_CALLBACK WM_USER+4764
+
 namespace
 {
+    void post_callback(void(*funcPtr)(UINT_PTR), UINT_PTR param)
+    {
+    }
+
     void get_view_params_from_viewport(
         ViewParams&             view_params,
         ViewExp&                view_exp,
@@ -51,30 +57,58 @@ namespace
             view_params.zoom = vp13->GetZoom();
             view_params.fov = vp13->GetFOV();
             view_params.distance = vp13->GetFocalDist();
+            view_params.hither = vp13->GetHither();
+            view_params.yon = vp13->GetYon();
+        }
+    }
 
-            INode* cam_node = vp13->GetViewCamera();
-            if (cam_node != nullptr)
+    void get_view_params_from_view_node(
+        ViewParams&             view_params,
+        INode*                  view_node,
+        const TimeValue         time)
+    {
+        const ObjectState& os = view_node->EvalWorldState(time);
+        switch (os.obj->SuperClassID())
+        {
+        case CAMERA_CLASS_ID:
+        {
+            CameraObject* cam = static_cast<CameraObject*>(os.obj);
+
+            Interval validity_interval;
+            validity_interval.SetInfinite();
+
+            Matrix3 cam_to_world = view_node->GetObjTMAfterWSM(time, &validity_interval);
+            cam_to_world.NoScale();
+
+            view_params.affineTM = Inverse(cam_to_world);
+
+            CameraState cam_state;
+            cam->EvalCameraState(time, validity_interval, &cam_state);
+
+            view_params.projType = PROJ_PERSPECTIVE;
+            view_params.fov = cam_state.fov;
+
+            if (cam_state.manualClip)
             {
-                CameraObject* cam_obj = static_cast<CameraObject*>(cam_node->GetObjectRef()); //todo: should check light viewport
-                if (cam_obj->SuperClassID() == CAMERA_CLASS_ID)
-                {
-                    CameraState cam_state;
-                    Interval validity_interval;
-                    validity_interval.SetInfinite();
-                    cam_obj->EvalCameraState(time, validity_interval, &cam_state);
-
-                    if (cam_state.manualClip)
-                    {
-                        view_params.hither = cam_state.hither;
-                        view_params.yon = cam_state.yon;
-                    }
-                }
+                view_params.hither = cam_state.hither;
+                view_params.yon = cam_state.yon;
             }
             else
             {
-                view_params.hither = vp13->GetHither();
-                view_params.yon = vp13->GetYon();
+                view_params.hither = 0.001f;
+                view_params.yon = 1.0e38f;
             }
+        }
+        break;
+
+        case LIGHT_CLASS_ID:
+        {
+            DbgAssert(!"Not implemented yet.");
+        }
+        break;
+
+        default:
+            DbgAssert(!"Unexpected super class ID for camera.");
         }
     }
 
@@ -158,6 +192,7 @@ AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& rend
     , m_view_inode(nullptr)
     , m_view_exp(nullptr)
     , m_progress_cb(nullptr)
+    , m_callback_set(false)
 {
     m_entities.clear();
 }
@@ -231,16 +266,34 @@ void AppleseedIInteractiveRender::update_camera()
 
     m_project->get_scene()->get_active_camera()->transform_sequence().set_transform((float)time,
         asf::Transformd::from_local_to_parent(to_matrix4d(Inverse(view_params.affineTM))));
+
+    m_callback_set = false;
 }
 
 void AppleseedIInteractiveRender::viewport_change_callback(void* param, NotifyInfo* pInfo)
 {
     AppleseedIInteractiveRender* renderer_ptr = reinterpret_cast<AppleseedIInteractiveRender*>(param);
+    if (!renderer_ptr->m_callback_set)
+    {
+        PostMessage(GetCOREInterface()->GetMAXHWnd(), WM_TRIGGER_CALLBACK, (UINT_PTR)renderer_ptr->update_caller, (UINT_PTR)renderer_ptr);
+    }
+    renderer_ptr->m_callback_set = true;
+}
 
-    renderer_ptr->update_camera();
+void AppleseedIInteractiveRender::update_caller(UINT_PTR param_ptr)
+{
+    try
+    {
+        AppleseedIInteractiveRender* renderer_ptr = reinterpret_cast<AppleseedIInteractiveRender*>(param_ptr);
 
-    if (renderer_ptr->m_render_session != nullptr)
-        renderer_ptr->m_render_session->reininitialize_render();
+        renderer_ptr->update_camera();
+
+        if (renderer_ptr->m_render_session != nullptr)
+            renderer_ptr->m_render_session->reininitialize_render();
+    }
+    catch (const std::exception&)
+    {
+    }
 }
 
 //
@@ -257,9 +310,12 @@ void AppleseedIInteractiveRender::BeginSession()
         m_time = GetCOREInterface()->GetTime();
 
         m_vpt_index = GetCOREInterface7()->getActiveViewportIndex();
-        ViewExp& view_exp = GetCOREInterface7()->getViewExp(m_vpt_index); //todo: should check the case of non-viewport views, e.g. trackview
+
         ViewParams view_params;
-        get_view_params_from_viewport(view_params, view_exp, m_time);
+        if (GetUseViewINode())
+            get_view_params_from_view_node(view_params, GetViewINode(), m_time);
+        else
+            get_view_params_from_viewport(view_params, *GetViewExp(), m_time);
 
         m_project = prepare_project(renderer_settings, view_params, m_time);
 
@@ -275,9 +331,7 @@ void AppleseedIInteractiveRender::BeginSession()
 
         m_currently_rendering = true;
 
-        UnRegisterNotification(viewport_change_callback, this, NOTIFY_VIEWPORT_CHANGE);
         RegisterNotification(viewport_change_callback, this, NOTIFY_VIEWPORT_CHANGE);
-        //RegisterNotification(viewport_change_callback, this, NOTIFY_ACTIVE_VIEWPORT_CHANGED);
 
         m_render_session->start_render();
     }

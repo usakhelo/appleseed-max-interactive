@@ -72,9 +72,11 @@ public:
 
     void update_camera();
     static void viewport_change_callback(void* param, NotifyInfo* pInfo);
+    static void update_caller(UINT_PTR param_ptr);
 
     asf::auto_release_ptr<asr::Project>         m_project;
     int                                         m_vpt_index;
+    bool                        m_callback_set;
 private:
     std::unique_ptr<InteractiveSession> m_render_session;
     Bitmap*                     m_bitmap;

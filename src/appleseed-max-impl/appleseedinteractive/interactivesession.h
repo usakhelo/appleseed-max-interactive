@@ -5,12 +5,10 @@
 #include "appleseedrenderer/renderersettings.h"
 
 // appleseed.foundation headers.
-#include "foundation/utility/autoreleaseptr.h"
 #include "foundation/platform/windows.h"    // include before 3ds Max headers
 
 // Standard headers.
 #include <thread>
-#include <future>
 #include <memory>
 
 // Forward declarations.
@@ -27,10 +25,10 @@ class InteractiveSession
 {
   public:
     InteractiveSession(
-        IIRenderMgr*                        iirender_mgr,
-        asr::Project*                       project,
-        const RendererSettings&             settings,
-        Bitmap*                             bitmap
+        IIRenderMgr*                iirender_mgr,
+        asr::Project*               project,
+        const RendererSettings&     settings,
+        Bitmap*                     bitmap
     );
 
     void render_thread();
@@ -39,6 +37,7 @@ class InteractiveSession
     void reininitialize_render();
     void end_render();
 
+  private:
     std::unique_ptr<InteractiveRendererController>  m_render_ctrl;
     std::thread                                     m_render_thread;
     Bitmap*                                         m_bitmap;

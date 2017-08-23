@@ -29,14 +29,6 @@
 // Interface header.
 #include "interactiverenderercontroller.h"
 
-// appleseed.foundation headers.
-#include "foundation/platform/windows.h"    // include before 3ds Max headers
-
-// 3ds Max headers.
-#include "interactiverender.h"
-#include "render.h"
-
-namespace asf = foundation;
 namespace asr = renderer;
 
 InteractiveRendererController::InteractiveRendererController()

@@ -109,19 +109,19 @@ void AppleseedRenderer::DeleteThis()
 
 void* AppleseedRenderer::GetInterface(ULONG id)
 {
-  if (id == I_RENDER_ID)
-  {
-    if (m_interactive_renderer == nullptr)
+    if (id == I_RENDER_ID)
     {
-      m_interactive_renderer = new AppleseedIInteractiveRender(const_cast<AppleseedRenderer&>(*this));
-    }
+        if (m_interactive_renderer == nullptr)
+        {
+            m_interactive_renderer = new AppleseedIInteractiveRender();
+        }
 
-    return static_cast<IInteractiveRender*>(m_interactive_renderer);
-  }
-  else
-  {
-    return Renderer::GetInterface(id);
-  }
+        return static_cast<IInteractiveRender*>(m_interactive_renderer);
+    }
+    else
+    {
+        return Renderer::GetInterface(id);
+    }
 }
 
 #if MAX_RELEASE == MAX_RELEASE_R19
@@ -190,18 +190,18 @@ void AppleseedRenderer::GetPlatformInformation(MSTR& info) const
 
 RefTargetHandle	AppleseedRenderer::Clone(RemapDir &remap)
 {
-  AppleseedRenderer* new_rend = static_cast<AppleseedRenderer*>(g_appleseed_renderer_classdesc.Create(false));
-  if (DbgVerify(new_rend != nullptr))
-  {
-      const int num_refs = NumRefs();
-      for (int i = 0; i < num_refs; ++i)
-      {
-        new_rend->ReplaceReference(i, remap.CloneRef(GetReference(i)));
-      }
-      BaseClone(this, new_rend, remap);
-  }
+    AppleseedRenderer* new_rend = static_cast<AppleseedRenderer*>(g_appleseed_renderer_classdesc.Create(false));
+    if (DbgVerify(new_rend != nullptr))
+    {
+        const int num_refs = NumRefs();
+        for (int i = 0; i < num_refs; ++i)
+        {
+            new_rend->ReplaceReference(i, remap.CloneRef(GetReference(i)));
+        }
+        BaseClone(this, new_rend, remap);
+    }
 
-  return new_rend;
+    return new_rend;
 }
 
 RefResult AppleseedRenderer::NotifyRefChanged(

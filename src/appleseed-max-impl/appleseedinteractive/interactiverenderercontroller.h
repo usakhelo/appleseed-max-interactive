@@ -31,15 +31,6 @@
 // appleseed.renderer headers.
 #include "renderer/api/rendering.h"
 
-// appleseed.foundation headers.
-#include "foundation/platform/types.h"
-
-// Standard headers.
-#include <cstddef>
-
-// Forward declarations.
-class RendProgressCallback;
-class IIRenderMgr;
 
 class InteractiveRendererController
   : public renderer::DefaultRendererController
@@ -48,10 +39,10 @@ class InteractiveRendererController
     InteractiveRendererController();
 
     virtual void on_rendering_begin() override;
-
     virtual Status get_status() const override;
+    
     void set_status(const Status status);
 
   private:
-    Status                              m_status;
+    Status m_status;
 };

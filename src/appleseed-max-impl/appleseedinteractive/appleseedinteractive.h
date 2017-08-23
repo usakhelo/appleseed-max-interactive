@@ -29,7 +29,7 @@ class AppleseedIInteractiveRender
     , public MaxSDK::IAbortableRenderer
 {
 public:
-    AppleseedIInteractiveRender(AppleseedRenderer& renderer);
+    AppleseedIInteractiveRender();
     virtual ~AppleseedIInteractiveRender();
 
     // IInteractiveRender
@@ -73,11 +73,12 @@ public:
 
     void update_camera(INode* camera);
 
-    asf::auto_release_ptr<asr::Project>         m_project;
+    asf::auto_release_ptr<asr::Project> m_project;
 
-    std::unique_ptr<INodeEventCallback> m_node_callback;
     SceneEventNamespace::CallbackKey    m_callback_key;
+    std::unique_ptr<INodeEventCallback> m_node_callback;
     std::unique_ptr<InteractiveSession> m_render_session;
+
 private:
     Bitmap*                     m_bitmap;
     bool                        m_currently_rendering;
@@ -88,7 +89,6 @@ private:
     MaxSceneEntities            m_entities;
     TimeValue                   m_time;
     Box2                        m_region;
-    AppleseedRenderer&          m_renderer_plugin;
     INode*                      m_scene_inode;
     ViewExp*                    m_view_exp;
     INode*                      m_view_inode;

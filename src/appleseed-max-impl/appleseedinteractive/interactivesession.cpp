@@ -5,18 +5,10 @@
 // appleseed-max headers.
 #include "appleseedinteractive/interactiverenderercontroller.h"
 #include "appleseedinteractive/interactivetilecallback.h"
-#include "appleseedrenderer/projectbuilder.h"
 
 // appleseed.renderer headers.
-#include "renderer/api/frame.h"
 #include "renderer/api/project.h"
 #include "renderer/api/rendering.h"
-
-// appleseed.foundation headers.
-#include "foundation/image/image.h"
-#include "foundation/platform/types.h"
-#include "foundation/utility/autoreleaseptr.h"
-#include "foundation/platform/windows.h"    // include before 3ds Max headers
 
 // 3ds Max headers.
 #include "bitmap.h"
@@ -40,10 +32,7 @@ InteractiveSession::InteractiveSession(
 void InteractiveSession::render_thread()
 {
     // Create the renderer controller.
-    if (m_render_ctrl != nullptr)
-        m_render_ctrl.reset(nullptr);
-
-    m_render_ctrl = std::unique_ptr<InteractiveRendererController>(new InteractiveRendererController());
+    m_render_ctrl.reset(new InteractiveRendererController());
 
     // Create the tile callback.
     InteractiveTileCallback m_tile_callback(m_bitmap, m_iirender_mgr, m_render_ctrl.get());
@@ -72,7 +61,7 @@ void InteractiveSession::abort_render()
 
 void InteractiveSession::reininitialize_render()
 {
-  m_render_ctrl->set_status(asr::IRendererController::ReinitializeRendering);
+    m_render_ctrl->set_status(asr::IRendererController::ReinitializeRendering);
 }
 
 void InteractiveSession::end_render()

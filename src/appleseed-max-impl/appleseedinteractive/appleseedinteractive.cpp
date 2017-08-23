@@ -6,33 +6,15 @@
 #include "appleseedinteractive/interactiverenderercontroller.h"
 #include "appleseedinteractive/interactivetilecallback.h"
 #include "appleseedinteractive/interactivesession.h"
-#include "appleseedrenderer/appleseedrenderer.h"
 #include "appleseedrenderer/projectbuilder.h"
 #include "utilities.h"
 
-// appleseed.renderer headers.
-#include "renderer/api/frame.h"
-#include "renderer/api/scene.h"
-#include "renderer/api/project.h"
-#include "renderer/api/rendering.h"
-
-// appleseed.foundation headers.
-#include "foundation/image/image.h"
-#include "foundation/platform/types.h"
-
-// 3ds Max headers.
-#include "Rendering/IRenderMessageManager.h"
-#include "Rendering/INoSignalCheckProgress.h"
-
 // Standard headers.
 #include <clocale>
-#include <cstddef>
-#include <string>
 
 namespace asf = foundation;
 namespace asr = renderer;
 
-#define WM_TRIGGER_CALLBACK WM_USER+4764
 
 namespace
 {
@@ -184,27 +166,23 @@ namespace
 
         virtual void ControllerOtherEvent(NodeKeyTab& nodes) override
         {
-            if (m_active_camera != nullptr)
+            if (m_active_camera == nullptr || m_renderer == nullptr)
+                return;
+
+            for (int i = 0; i < nodes.Count(); i++)
             {
-                for (int i = 0; i < nodes.Count(); i++)
+                if (NodeEventNamespace::GetNodeByKey(nodes[i]) == m_active_camera)
                 {
-                    if (NodeEventNamespace::GetNodeByKey(nodes[i]) == m_active_camera)
-                    {
-                        if (m_renderer != nullptr)
-                        {
-                            m_renderer->update_camera(m_active_camera);
-                            m_renderer->m_render_session->reininitialize_render();
-                        }
-                    }
+                    m_renderer->update_camera(m_active_camera);
+                    m_renderer->m_render_session->reininitialize_render();
+                    break;
                 }
-                
             }
-            DebugPrint(_T("ControllerOtherEvent called on this amound of objects: %d\n"), nodes.Count());
         }
 
     private:
-        AppleseedIInteractiveRender*         m_renderer;
-        INode*  m_active_camera;
+        AppleseedIInteractiveRender*    m_renderer;
+        INode*                          m_active_camera;
     };
 }
 
@@ -212,9 +190,8 @@ namespace
 // IInteractiveRender
 //
 
-AppleseedIInteractiveRender::AppleseedIInteractiveRender(AppleseedRenderer& renderer)
-    : m_renderer_plugin(renderer)
-    , m_owner_wnd(0)
+AppleseedIInteractiveRender::AppleseedIInteractiveRender()
+    : m_owner_wnd(0)
     , m_currently_rendering(false)
     , m_bitmap(nullptr)
     , m_iirender_mgr(nullptr)
@@ -289,9 +266,8 @@ void AppleseedIInteractiveRender::update_camera(INode* camera)
     ViewParams view_params;
     get_view_params_from_view_node(view_params, camera, m_time);
 
-    RendererSettings renderer_settings = RendererSettings::defaults();
-
-    m_project->get_scene()->get_active_camera()->transform_sequence().set_transform((float)m_time,
+    m_project->get_scene()->get_active_camera()->transform_sequence().set_transform(
+        (float)m_time,
         asf::Transformd::from_local_to_parent(to_matrix4d(Inverse(view_params.affineTM))));
 }
 
@@ -307,11 +283,12 @@ void AppleseedIInteractiveRender::BeginSession()
 
         m_time = GetCOREInterface()->GetTime();
 
-        INode* active_cam = GetUseViewINode() ? GetViewINode() : nullptr;
+        ViewExp13* vp13 = reinterpret_cast<ViewExp13*>(GetViewExp()->Execute(ViewExp::kEXECUTE_GET_VIEWEXP_13));
+        INode* active_cam = vp13->GetViewCamera();
 
         ViewParams view_params;
-        if (active_cam)
-            get_view_params_from_view_node(view_params, active_cam, m_time);
+        if (GetUseViewINode())
+            get_view_params_from_view_node(view_params, GetViewINode(), m_time);
         else
             get_view_params_from_viewport(view_params, *GetViewExp(), m_time);
 
@@ -328,6 +305,7 @@ void AppleseedIInteractiveRender::BeginSession()
             m_progress_cb->SetTitle(_T("Rendering..."));
 
         m_currently_rendering = true;
+
         m_node_callback.reset(new SceneChangeCallback(this, active_cam));
         m_callback_key = GetISceneEventManager()->RegisterCallback(m_node_callback.get(), false, 100, true);
 
@@ -357,7 +335,6 @@ void AppleseedIInteractiveRender::EndSession()
         m_render_session->end_render();
 
         m_render_session.reset(nullptr);
-
     }
     
     render_end(m_entities.m_objects, m_time);
@@ -453,7 +430,6 @@ void AppleseedIInteractiveRender::SetDefaultLights(DefaultLight* pDefLights, int
     {
         m_default_lights.insert(m_default_lights.begin(), pDefLights, pDefLights + numDefLights);
     }
-
 }
 
 const DefaultLight* AppleseedIInteractiveRender::GetDefaultLights(int& numDefLights) const

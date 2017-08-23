@@ -31,23 +31,23 @@
 // appleseed-max headers.
 #include "appleseedrenderer/tilecallback.h"
 
-// appleseed.renderer headers.
-#include "renderer/api/rendering.h"
-
 // appleseed.foundation headers.
 #include "foundation/image/tile.h"
 #include "foundation/platform/types.h"
 #include "foundation/platform/windows.h"    // include before 3ds Max headers
 
+// 3ds Max headers.
+#include "bitmap.h"
+#include "interactiverender.h"
+
 // Standard headers.
-#include <cstddef>
-#include <memory>
 #include <future>
 
 // Forward declarations.
 namespace renderer  { class Frame; }
 class Bitmap;
 class IIRenderMgr;
+
 
 class InteractiveTileCallback
   : public TileCallback
@@ -60,14 +60,13 @@ class InteractiveTileCallback
 
     virtual void post_render(const renderer::Frame* frame) override;
 
-    void        update_window();
-    void        PostCallback(void(*funcPtr)(UINT_PTR), UINT_PTR param);
+    void update_window();
+    void post_callback(void(*funcPtr)(UINT_PTR), UINT_PTR param);
     static void update_caller(UINT_PTR param_ptr);
 
-    renderer::IRendererController*  m_renderer_ctrl;
-    IIRenderMgr*          m_iimanager;
-    std::promise<void>    m_ui_promise;
-
   private:
-    Bitmap*               m_bitmap;
+    Bitmap*                         m_bitmap;
+    IIRenderMgr*                    m_iimanager;
+    renderer::IRendererController*  m_renderer_ctrl;
+    std::promise<void>              m_ui_promise;
 };

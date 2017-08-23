@@ -29,34 +29,14 @@
 // Interface header.
 #include "appleseedinteractive/interactivetilecallback.h"
 
-// appleseed.renderer headers.
-#include "renderer/api/frame.h"
-
-// appleseed.foundation headers.
-#include "foundation/image/canvasproperties.h"
-#include "foundation/image/color.h"
-#include "foundation/image/image.h"
-#include "foundation/image/pixel.h"
-#include "foundation/platform/atomic.h"
-
-// 3ds Max headers.
-#include <assert1.h>
-#include <bitmap.h>
-#include "interactiverender.h"
-
-// Standard headers.
-#include <algorithm>
-#include <future>
-
-namespace asf = foundation;
 namespace asr = renderer;
 
-#define WM_TRIGGER_CALLBACK WM_USER+4764
+#define WM_TRIGGER_CALLBACK WM_USER + 4764
 
 InteractiveTileCallback::InteractiveTileCallback(
     Bitmap*                         bitmap,
     IIRenderMgr*                    iimanager,
-    asr::IRendererController*   render_controller
+    asr::IRendererController*       render_controller
     )
     : TileCallback(bitmap, 0)
     , m_bitmap(bitmap)
@@ -89,12 +69,12 @@ void InteractiveTileCallback::post_render(
     if (m_renderer_ctrl->get_status() == asr::IRendererController::ContinueRendering)
     {
         std::future<int> ui_future = m_ui_promise.get_future();
-        PostCallback(update_caller, (UINT_PTR)this);
+        post_callback(update_caller, (UINT_PTR)this);
         ui_future.wait();
     }
 }
 
-void InteractiveTileCallback::PostCallback(void(*funcPtr)(UINT_PTR), UINT_PTR param)
+void InteractiveTileCallback::post_callback(void(*funcPtr)(UINT_PTR), UINT_PTR param)
 {
   PostMessage(GetCOREInterface()->GetMAXHWnd(), WM_TRIGGER_CALLBACK, (UINT_PTR)funcPtr, (UINT_PTR)param);
 }

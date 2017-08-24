@@ -59,10 +59,10 @@ void InteractiveTileCallback::update_caller(UINT_PTR param_ptr)
     object_ptr->update_window();
 }
 
-void InteractiveTileCallback::post_render(
+void InteractiveTileCallback::on_progressive_frame_end(
     const asr::Frame* frame)
 {
-    TileCallback::post_render(frame);
+    TileCallback::on_progressive_frame_end(frame);
 
     //wait until ui proc gets handled to ensure class object is valid
     m_ui_promise = std::promise<void>();

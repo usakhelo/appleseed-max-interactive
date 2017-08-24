@@ -58,7 +58,7 @@ class InteractiveTileCallback
         IIRenderMgr*                    iimanager,
         renderer::IRendererController*  render_controller);
 
-    virtual void post_render(const renderer::Frame* frame) override;
+    virtual void on_progressive_frame_end(const renderer::Frame* frame) override;
 
     void update_window();
     void post_callback(void(*funcPtr)(UINT_PTR), UINT_PTR param);
